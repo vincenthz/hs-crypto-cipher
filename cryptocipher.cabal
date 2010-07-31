@@ -1,0 +1,33 @@
+Name:                cryptocipher
+Version:             0.1
+Description:         Symmetrical Block and Stream Ciphers
+License:             BSD3
+License-file:        LICENSE
+Author:              Vincent Hanquez
+Maintainer:          vincent@snarc.org
+Synopsis:            Symmetrical Block and Stream Ciphers
+Category:            Cryptography
+Build-Type:          Simple
+Cabal-Version:       >=1.6
+
+Flag test
+  Description:       Build unit test
+  Default:           False
+
+Library
+  Build-Depends:     base >= 3 && < 5, bytestring, haskell98, vector
+  Exposed-modules:   Crypto.Cipher.RC4
+                     Crypto.Cipher.Camellia
+  ghc-options:       -Wall
+
+Executable           Tests
+  Main-Is:           Tests.hs
+  if flag(test)
+    Buildable:       True
+    Build-depends:   base >= 3 && < 5, HUnit, bytestring
+  else
+    Buildable:       False
+
+source-repository head
+  type:     git
+  location: git://github.com/vincenthz/hs-cryptocipher
