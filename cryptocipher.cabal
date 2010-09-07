@@ -3,8 +3,9 @@ Version:             0.1
 Description:         Symmetrical Block and Stream Ciphers
 License:             BSD3
 License-file:        LICENSE
-Author:              Vincent Hanquez
-Maintainer:          vincent@snarc.org
+Copyright:           Vincent Hanquez <vincent@snarc.org>
+Author:              Vincent Hanquez <vincent@snarc.org>
+Maintainer:          Vincent Hanquez <vincent@snarc.org>
 Synopsis:            Symmetrical Block and Stream Ciphers
 Category:            Cryptography
 Build-Type:          Simple
