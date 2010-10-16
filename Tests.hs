@@ -4,6 +4,7 @@ import Data.Char
 import Data.Bits
 import Data.Word
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Char8 as BC
 import qualified Crypto.Cipher.RC4 as RC4
 import qualified Crypto.Cipher.Camellia as Camellia
 
@@ -41,7 +42,7 @@ wordify :: [Char] -> [Word8]
 wordify = map (toEnum . fromEnum)
 
 packString :: [Char] -> B.ByteString
-packString = B.pack . wordify
+packString = BC.pack
 
 vectors_rc4 =
 	[ (wordify "Key", packString "Plaintext", [ 0xBB,0xF3,0x16,0xE8,0xD9,0x40,0xAF,0x0A,0xD3 ])
