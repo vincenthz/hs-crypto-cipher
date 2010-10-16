@@ -2,6 +2,10 @@
 
 import Test.HUnit ((~:), (~=?))
 import qualified Test.HUnit as Unit
+
+import Test.QuickCheck
+import Test.QuickCheck.Test
+
 import Data.Char
 import Data.Bits
 import Data.Word
@@ -64,4 +68,5 @@ vectors =
 utests :: [Unit.Test]
 utests = concatMap (\(name, v, f) -> map (\(k,p,e) -> name ~: name ~: e ~=? f k p) v) vectors
 
-main = Unit.runTestTT (Unit.TestList utests)
+main = do
+	Unit.runTestTT (Unit.TestList utests)
