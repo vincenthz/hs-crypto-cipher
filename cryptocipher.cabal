@@ -16,7 +16,7 @@ Flag test
   Default:           False
 
 Library
-  Build-Depends:     base >= 3 && < 5, bytestring, haskell98, vector
+  Build-Depends:     base >= 4, bytestring, haskell98, vector
   Exposed-modules:   Crypto.Cipher.RC4
                      Crypto.Cipher.Camellia
   ghc-options:       -Wall
