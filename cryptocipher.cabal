@@ -19,6 +19,7 @@ Library
   Build-Depends:     base >= 4, bytestring, vector, random
   Exposed-modules:   Crypto.Cipher.RC4
                      Crypto.Cipher.Camellia
+  other-modules:     Number.ModArithmetic.hs
   ghc-options:       -Wall
 
 Executable           Tests

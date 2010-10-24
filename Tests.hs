@@ -5,12 +5,18 @@ import qualified Test.HUnit as Unit
 
 import Test.QuickCheck
 import Test.QuickCheck.Test
+import System.IO (hFlush, stdout)
 
+import Data.List (intercalate)
 import Data.Char
 import Data.Bits
 import Data.Word
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as BC
+
+-- numbers
+import Number.ModArithmetic
+-- ciphers
 import qualified Crypto.Cipher.RC4 as RC4
 import qualified Crypto.Cipher.Camellia as Camellia
 
@@ -68,5 +74,40 @@ vectors =
 utests :: [Unit.Test]
 utests = concatMap (\(name, v, f) -> map (\(k,p,e) -> name ~: name ~: e ~=? f k p) v) vectors
 
+{- end of units tests -}
+{- start of QuickCheck verification -}
+
+-- FIXME better to tweak the property to generate positive integer instead of this.
+
+prop_gcde_binary_valid (a, b)
+	| a > 0 && b >= 0 =
+		let (x,y,v) = gcde_binary a b in
+		and [a*x + b*y == v, gcd a b == v]
+	| otherwise          = True
+
+prop_modexp_rtl_valid (a, b, m)
+	| m > 0 && a >= 0 && b >= 0 = exponantiation_rtl_binary a b m == ((a ^ b) `mod` m)
+	| otherwise                 = True
+
+prop_modinv_valid (a, m)
+	| m > 1 && a > 0 =
+		case inverse a m of
+			Just ainv -> (ainv * a) `mod` m == 1
+			Nothing   -> True
+	| otherwise       = True
+
+args = Args
+	{ replay     = Nothing
+	, maxSuccess = 1000
+	, maxDiscard = 4000
+	, maxSize    = 1000
+	}
+
+run_test n t = putStr ("  " ++ n ++ " ... ") >> hFlush stdout >> quickCheckWith args t
+
 main = do
 	Unit.runTestTT (Unit.TestList utests)
+
+	run_test "gcde binary valid" prop_gcde_binary_valid
+	run_test "exponantiation RTL valid" prop_modexp_rtl_valid
+	run_test "inverse valid" prop_modinv_valid
