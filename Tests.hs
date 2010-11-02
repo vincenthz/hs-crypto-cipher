@@ -113,7 +113,7 @@ data Rng = Rng Int
 instance CryptoRandomGen Rng where
 	newGen _       = Right (Rng 0)
 	genSeedLength  = 0
-	genBytes g len = Right (B.pack $ replicate len 0x2d, g)
+	genBytes len g = Right (B.pack $ replicate len 0x2d, g)
 
 rng = Rng 0
 

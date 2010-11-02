@@ -106,7 +106,7 @@ encrypt rng pk m
 {- get random non-null bytes for encryption padding. -}
 getRandomBytes :: CryptoRandomGen g => g -> Int -> Either Error (ByteString, g)
 getRandomBytes rng n = do
-	gend <- either (Left . RandomGenFailure) Right $ genBytes rng n
+	gend <- either (Left . RandomGenFailure) Right $ genBytes n rng
 	let (bytes, rng') = first (B.pack . filter (/= 0) . B.unpack) gend
 	let left          = (n - B.length bytes)
 	if left == 0
