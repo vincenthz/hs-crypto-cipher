@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns, FlexibleInstances, CPP #-}
+{-# LANGUAGE FlexibleInstances, CPP #-}
 
 -- |
 -- Module      : Crypto.Cipher.RSA
