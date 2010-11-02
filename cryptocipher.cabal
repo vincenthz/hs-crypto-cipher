@@ -17,7 +17,7 @@ Flag test
   Default:           False
 
 Library
-  Build-Depends:     base >= 4, bytestring, vector, crypto-api
+  Build-Depends:     base >= 4 && < 7, bytestring, vector, crypto-api
   Exposed-modules:   Crypto.Cipher.RC4
                      Crypto.Cipher.Camellia
                      Crypto.Cipher.RSA
@@ -28,7 +28,7 @@ Executable           Tests
   Main-Is:           Tests.hs
   if flag(test)
     Buildable:       True
-    Build-depends:   base >= 4, HUnit, bytestring, QuickCheck >= 2
+    Build-depends:   base >= 4 && < 7, HUnit, bytestring, QuickCheck >= 2
   else
     Buildable:       False
 
