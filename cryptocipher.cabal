@@ -21,6 +21,7 @@ Library
   Exposed-modules:   Crypto.Cipher.RC4
                      Crypto.Cipher.Camellia
                      Crypto.Cipher.RSA
+                     Crypto.Cipher.DSA
   other-modules:     Number.ModArithmetic
   ghc-options:       -Wall
 
