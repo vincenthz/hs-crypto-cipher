@@ -10,8 +10,8 @@ module Crypto.Cipher.DSA
 	( Error(..)
 	, PublicKey(..)
 	, PrivateKey(..)
-	, decrypt
-	, encrypt
+	, sign
+	, verify
 	) where
 
 import Control.Arrow (first)
