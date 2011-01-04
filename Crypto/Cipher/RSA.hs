@@ -47,7 +47,7 @@ data PrivateKey = PrivateKey
 	, private_qinv :: Integer -- ^ q^(-1) mod p
 	} deriving (Show)
 
-#if !MIN_VERSION_base(4,3,0)
+#if ! (MIN_VERSION_base(4,3,0))
 instance Monad (Either Error) where
 	return          = Right
 	(Left x) >>= _  = Left x
