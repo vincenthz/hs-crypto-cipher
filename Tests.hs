@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, CPP #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 import Test.HUnit ((~:), (~=?))
 import qualified Test.HUnit as Unit
@@ -141,14 +141,11 @@ publickey = RSA.PublicKey
 	, RSA.public_e  = 65537
 	}
 
-args = Args
+args = stdArgs
 	{ replay     = Nothing
 	, maxSuccess = 1000
 	, maxDiscard = 4000
 	, maxSize    = 1000
-#if MIN_VERSION_QuickCheck(2,3,0)
-	, chatty     = True
-#endif
 	}
 
 run_test n t = putStr ("  " ++ n ++ " ... ") >> hFlush stdout >> quickCheckWith args t
