@@ -23,6 +23,7 @@ Library
                      Crypto.Cipher.RSA
                      Crypto.Cipher.DSA
   other-modules:     Number.ModArithmetic
+                     Number.Serialize
   ghc-options:       -Wall
 
 Executable           Tests
