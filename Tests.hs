@@ -8,6 +8,7 @@ import Test.QuickCheck.Test
 import System.IO (hFlush, stdout)
 
 import Control.Monad
+import Control.Arrow (first)
 
 import Data.List (intercalate)
 import Data.Char
@@ -111,14 +112,28 @@ instance Arbitrary RSAMessage where
 		ws <- replicateM sz (choose (0,255) :: Gen Int)
 		return $ RSAMessage $ B.pack $ map fromIntegral ws
 
-data Rng = Rng Int
+{- this is a just test rng. this is absolutely not a serious RNG. DO NOT use elsewhere -}
+data Rng = Rng (Int, Int)
+
+getByte :: Rng -> (Word8, Rng)
+getByte (Rng (mz, mw)) =
+	let mz2 = 36969 * (mz `mod` 65536) in
+	let mw2 = 18000 * (mw `mod` 65536) in
+	(fromIntegral (mz2 + mw2), Rng (mz2, mw2))
+
+getBytes 0 rng = ([], rng)
+getBytes n rng =
+	let (b, rng')  = getByte rng in
+	let (l, rng'') = getBytes (n-1) rng' in
+	(b:l, rng'')
 
 instance CryptoRandomGen Rng where
-	newGen _       = Right (Rng 0)
+	newGen _       = Right (Rng (2,3))
 	genSeedLength  = 0
-	genBytes len g = Right (B.pack $ replicate len 0x2d, g)
+	genBytes len g = Right $ first B.pack $ getBytes len g
 
-rng = Rng 0
+rng = Rng (1,2) 
+
 
 prop_rsa_fast_valid (RSAMessage msg) =
 	(either Left (RSA.decrypt rsaPrivatekey . fst) $ RSA.encrypt rng rsaPublickey msg) == Right msg
