@@ -134,6 +134,9 @@ instance CryptoRandomGen Rng where
 
 rng = Rng (1,2) 
 
+{-----------------------------------------------------------------------------------------------}
+{- testing RSA -}
+{-----------------------------------------------------------------------------------------------}
 
 prop_rsa_fast_valid (RSAMessage msg) =
 	(either Left (RSA.decrypt rsaPrivatekey . fst) $ RSA.encrypt rng rsaPublickey msg) == Right msg
