@@ -24,6 +24,7 @@ Library
                      Crypto.Cipher.DSA
   other-modules:     Number.ModArithmetic
                      Number.Serialize
+                     Number.Generate
   ghc-options:       -Wall
 
 Executable           Tests
