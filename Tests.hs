@@ -196,9 +196,9 @@ prop_dsa_valid (RSAMessage msg) =
 
 args = Args
 	{ replay     = Nothing
-	, maxSuccess = 1000
-	, maxDiscard = 4000
-	, maxSize    = 1000
+	, maxSuccess = 200
+	, maxDiscard = 1000
+	, maxSize    = 200
 #if MIN_VERSION_QuickCheck(2,3,0)
 	, chatty     = True
 #endif
