@@ -19,7 +19,6 @@ module Crypto.Cipher.DSA
 import Crypto.Random
 import Data.Maybe
 import Data.ByteString (ByteString)
-import qualified Data.ByteString as B
 import Number.ModArithmetic (exponantiation_rtl_binary, inverse)
 import Number.Serialize
 import Number.Generate
