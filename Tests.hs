@@ -15,6 +15,8 @@ import Data.Bits
 import Data.Word
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as BC
+-- for DSA
+import qualified Crypto.Hash.SHA1 as SHA1
 
 -- numbers
 import Number.ModArithmetic
@@ -22,6 +24,7 @@ import Number.ModArithmetic
 import qualified Crypto.Cipher.RC4 as RC4
 import qualified Crypto.Cipher.Camellia as Camellia
 import qualified Crypto.Cipher.RSA as RSA
+import qualified Crypto.Cipher.DSA as DSA
 import Crypto.Random
 
 encryptStream fi fc key plaintext = B.unpack $ snd $ fc (fi key) plaintext
@@ -141,6 +144,38 @@ rsaPublickey = RSA.PublicKey
 	, RSA.public_e  = 65537
 	}
 
+{-----------------------------------------------------------------------------------------------}
+{- testing DSA -}
+{-----------------------------------------------------------------------------------------------}
+
+
+dsaParams = (p,g,q)
+	where
+		p = 0x00a8c44d7d0bbce69a39008948604b9c7b11951993a5a1a1fa995968da8bb27ad9101c5184bcde7c14fb79f7562a45791c3d80396cefb328e3e291932a17e22edd
+		g = 0x0bf9fe6c75d2367b88912b2252d20fdcad06b3f3a234b92863a1e30a96a123afd8e8a4b1dd953e6f5583ef8e48fc7f47a6a1c8f24184c76dba577f0fec2fcd1c
+		q = 0x0096674b70ef58beaaab6743d6af16bb862d18d119
+
+dsaPrivatekey = DSA.PrivateKey
+	{ DSA.private_params = dsaParams
+	, DSA.private_x      = 0x229bac7aa1c7db8121bfc050a3426eceae23fae8
+	}
+
+dsaPublickey = DSA.PublicKey
+	{ DSA.public_params = dsaParams
+	, DSA.public_y      = 0x4fa505e86e32922f1fa1702a120abdba088bb4be801d4c44f7fc6b9094d85cd52c429cbc2b39514e30909b31e2e2e0752b0fc05c1a7d9c05c3e52e49e6edef4c
+	}
+
+prop_dsa_valid (RSAMessage msg) =
+	case DSA.verify signature (SHA1.hash) dsaPublickey msg of
+		Left err -> False
+		Right b  -> b
+	where
+		Right (signature, rng') = DSA.sign rng (SHA1.hash) dsaPrivatekey msg
+
+{-----------------------------------------------------------------------------------------------}
+{- main -}
+{-----------------------------------------------------------------------------------------------}
+
 args = Args
 	{ replay     = Nothing
 	, maxSuccess = 1000
@@ -162,3 +197,5 @@ main = do
 
 	run_test "RSA decrypt(slow).encrypt = id" prop_rsa_slow_valid
 	run_test "RSA decrypt(fast).encrypt = id" prop_rsa_fast_valid
+
+	run_test "DSA verify . sign = valid" prop_dsa_valid
