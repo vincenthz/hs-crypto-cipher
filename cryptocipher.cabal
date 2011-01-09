@@ -31,7 +31,7 @@ Executable           Tests
   Main-Is:           Tests.hs
   if flag(test)
     Buildable:       True
-    Build-depends:   base >= 4 && < 7, HUnit, bytestring, QuickCheck >= 2
+    Build-depends:   base >= 4 && < 7, HUnit, bytestring, cryptohash, QuickCheck >= 2
   else
     Buildable:       False
 
