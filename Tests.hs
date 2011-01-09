@@ -8,6 +8,7 @@ import Test.QuickCheck.Test
 import System.IO (hFlush, stdout)
 
 import Control.Monad
+import Control.Arrow (first)
 
 import Data.List (intercalate)
 import Data.Char
@@ -15,6 +16,8 @@ import Data.Bits
 import Data.Word
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as BC
+-- for DSA
+import qualified Crypto.Hash.SHA1 as SHA1
 
 -- numbers
 import Number.ModArithmetic
@@ -22,6 +25,7 @@ import Number.ModArithmetic
 import qualified Crypto.Cipher.RC4 as RC4
 import qualified Crypto.Cipher.Camellia as Camellia
 import qualified Crypto.Cipher.RSA as RSA
+import qualified Crypto.Cipher.DSA as DSA
 import Crypto.Random
 
 encryptStream fi fc key plaintext = B.unpack $ snd $ fc (fi key) plaintext
@@ -108,23 +112,40 @@ instance Arbitrary RSAMessage where
 		ws <- replicateM sz (choose (0,255) :: Gen Int)
 		return $ RSAMessage $ B.pack $ map fromIntegral ws
 
-data Rng = Rng Int
+{- this is a just test rng. this is absolutely not a serious RNG. DO NOT use elsewhere -}
+data Rng = Rng (Int, Int)
+
+getByte :: Rng -> (Word8, Rng)
+getByte (Rng (mz, mw)) =
+	let mz2 = 36969 * (mz `mod` 65536) in
+	let mw2 = 18000 * (mw `mod` 65536) in
+	(fromIntegral (mz2 + mw2), Rng (mz2, mw2))
+
+getBytes 0 rng = ([], rng)
+getBytes n rng =
+	let (b, rng')  = getByte rng in
+	let (l, rng'') = getBytes (n-1) rng' in
+	(b:l, rng'')
 
 instance CryptoRandomGen Rng where
-	newGen _       = Right (Rng 0)
+	newGen _       = Right (Rng (2,3))
 	genSeedLength  = 0
-	genBytes len g = Right (B.pack $ replicate len 0x2d, g)
+	genBytes len g = Right $ first B.pack $ getBytes len g
 
-rng = Rng 0
+rng = Rng (1,2) 
+
+{-----------------------------------------------------------------------------------------------}
+{- testing RSA -}
+{-----------------------------------------------------------------------------------------------}
 
 prop_rsa_fast_valid (RSAMessage msg) =
-	(either Left (RSA.decrypt privatekey . fst) $ RSA.encrypt rng publickey msg) == Right msg
+	(either Left (RSA.decrypt rsaPrivatekey . fst) $ RSA.encrypt rng rsaPublickey msg) == Right msg
 
 prop_rsa_slow_valid (RSAMessage msg) =
-	(either Left (RSA.decrypt pk . fst) $ RSA.encrypt rng publickey msg) == Right msg
-	where pk = privatekey { RSA.private_p = 0, RSA.private_q = 0 }
+	(either Left (RSA.decrypt pk . fst) $ RSA.encrypt rng rsaPublickey msg) == Right msg
+	where pk = rsaPrivatekey { RSA.private_p = 0, RSA.private_q = 0 }
 
-privatekey = RSA.PrivateKey
+rsaPrivatekey = RSA.PrivateKey
 	{ RSA.private_sz   = 128
 	, RSA.private_n    = 140203425894164333410594309212077886844966070748523642084363106504571537866632850620326769291612455847330220940078873180639537021888802572151020701352955762744921926221566899281852945861389488419179600933178716009889963150132778947506523961974222282461654256451508762805133855866018054403911588630700228345151
 	, RSA.private_d    = 133764127300370985476360382258931504810339098611363623122953018301285450176037234703101635770582297431466449863745848961134143024057267778947569638425565153896020107107895924597628599677345887446144410702679470631826418774397895304952287674790343620803686034122942606764275835668353720152078674967983573326257
@@ -135,17 +156,49 @@ privatekey = RSA.PrivateKey
 	, RSA.private_qinv = 11136639099661288633118187183300604127717437440459572124866697429021958115062007251843236337586667012492941414990095176435990146486852255802952814505784196
 	}
 
-publickey = RSA.PublicKey
+rsaPublickey = RSA.PublicKey
 	{ RSA.public_sz = 128
 	, RSA.public_n  = 140203425894164333410594309212077886844966070748523642084363106504571537866632850620326769291612455847330220940078873180639537021888802572151020701352955762744921926221566899281852945861389488419179600933178716009889963150132778947506523961974222282461654256451508762805133855866018054403911588630700228345151
 	, RSA.public_e  = 65537
 	}
 
+{-----------------------------------------------------------------------------------------------}
+{- testing DSA -}
+{-----------------------------------------------------------------------------------------------}
+
+
+dsaParams = (p,g,q)
+	where
+		p = 0x00a8c44d7d0bbce69a39008948604b9c7b11951993a5a1a1fa995968da8bb27ad9101c5184bcde7c14fb79f7562a45791c3d80396cefb328e3e291932a17e22edd
+		g = 0x0bf9fe6c75d2367b88912b2252d20fdcad06b3f3a234b92863a1e30a96a123afd8e8a4b1dd953e6f5583ef8e48fc7f47a6a1c8f24184c76dba577f0fec2fcd1c
+		q = 0x0096674b70ef58beaaab6743d6af16bb862d18d119
+
+dsaPrivatekey = DSA.PrivateKey
+	{ DSA.private_params = dsaParams
+	, DSA.private_x      = 0x229bac7aa1c7db8121bfc050a3426eceae23fae8
+	}
+
+dsaPublickey = DSA.PublicKey
+	{ DSA.public_params = dsaParams
+	, DSA.public_y      = 0x4fa505e86e32922f1fa1702a120abdba088bb4be801d4c44f7fc6b9094d85cd52c429cbc2b39514e30909b31e2e2e0752b0fc05c1a7d9c05c3e52e49e6edef4c
+	}
+
+prop_dsa_valid (RSAMessage msg) =
+	case DSA.verify signature (SHA1.hash) dsaPublickey msg of
+		Left err -> False
+		Right b  -> b
+	where
+		Right (signature, rng') = DSA.sign rng (SHA1.hash) dsaPrivatekey msg
+
+{-----------------------------------------------------------------------------------------------}
+{- main -}
+{-----------------------------------------------------------------------------------------------}
+
 args = stdArgs
 	{ replay     = Nothing
-	, maxSuccess = 1000
-	, maxDiscard = 4000
-	, maxSize    = 1000
+	, maxSuccess = 200
+	, maxDiscard = 1000
+	, maxSize    = 200
 	}
 
 run_test n t = putStr ("  " ++ n ++ " ... ") >> hFlush stdout >> quickCheckWith args t
@@ -159,3 +212,5 @@ main = do
 
 	run_test "RSA decrypt(slow).encrypt = id" prop_rsa_slow_valid
 	run_test "RSA decrypt(fast).encrypt = id" prop_rsa_fast_valid
+
+	run_test "DSA verify . sign = valid" prop_dsa_valid

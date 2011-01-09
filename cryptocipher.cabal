@@ -21,14 +21,17 @@ Library
   Exposed-modules:   Crypto.Cipher.RC4
                      Crypto.Cipher.Camellia
                      Crypto.Cipher.RSA
+                     Crypto.Cipher.DSA
   other-modules:     Number.ModArithmetic
+                     Number.Serialize
+                     Number.Generate
   ghc-options:       -Wall
 
 Executable           Tests
   Main-Is:           Tests.hs
   if flag(test)
     Buildable:       True
-    Build-depends:   base >= 4 && < 7, HUnit, bytestring, QuickCheck >= 2
+    Build-depends:   base >= 4 && < 7, HUnit, bytestring, cryptohash, QuickCheck >= 2
   else
     Buildable:       False
 

@@ -17,10 +17,10 @@ module Crypto.Cipher.RSA
 
 import Control.Arrow (first)
 import Crypto.Random
-import Data.Bits
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import Number.ModArithmetic (exponantiation_rtl_binary)
+import Number.Serialize
 
 data Error =
 	  MessageSizeIncorrect      -- ^ the message to decrypt is not of the correct size (need to be == private_size)
@@ -124,17 +124,6 @@ i2ospOf len m
 	where
 		lenbytes = B.length bytes
 		bytes    = i2osp m
-
--- | os2ip converts a byte string into a positive integer
-os2ip :: ByteString -> Integer
-os2ip = B.foldl' (\a b -> (256 * a) .|. (fromIntegral b)) 0
-
--- | i2osp converts a positive integer into a byte string
-i2osp :: Integer -> ByteString
-i2osp m = B.reverse $ B.unfoldr divMod256 m
-	where
-		divMod256 0 = Nothing
-		divMod256 n = Just (fromIntegral a,b) where (b,a) = n `divMod` 256
 
 expmod :: Integer -> Integer -> Integer -> Integer
 expmod = exponantiation_rtl_binary
