@@ -15,6 +15,7 @@ module Crypto.Cipher.RSA
 	, HashASN1
 	, decrypt
 	, encrypt
+	, sign
 	) where
 
 import Control.Arrow (first)
@@ -28,6 +29,7 @@ data Error =
 	  MessageSizeIncorrect      -- ^ the message to decrypt is not of the correct size (need to be == private_size)
 	| MessageTooLong            -- ^ the message to encrypt is too long (>= private_size - 11)
 	| MessageNotRecognized      -- ^ the message decrypted doesn't have a PKCS15 structure (0 2 .. 0 msg)
+	| SignatureTooLong          -- ^ the signature generated through the hash is too long to process with this key
 	| RandomGenFailure GenError -- ^ the random generator returns an error. give the opportunity to reseed for example.
 	| KeyInternalError          -- ^ the whole key is probably not valid, since the message is bigger than the key size
 	deriving (Show,Eq)
@@ -107,6 +109,21 @@ encrypt rng pk m
 		(em, rng') <- padPKCS1 rng (public_sz pk) m
 		c          <- i2ospOf (public_sz pk) $ expmod (os2ip em) (public_e pk) (public_n pk)
 		return (c, rng')
+
+{-| sign message using private key, a hash and its ASN1 description -}
+sign :: HashF -> HashASN1 -> PrivateKey -> ByteString -> Either Error ByteString
+sign hash hashdesc pk m = makeSignature hash hashdesc (private_sz pk) m >>= d pk
+	where d = if private_p pk /= 0 && private_q pk /= 0 then dpFast else dpSlow
+
+{- makeSignature for sign and verify -}
+makeSignature :: HashF -> HashASN1 -> Int -> ByteString -> Either Error ByteString
+makeSignature hash descr klen m
+	| klen < siglen+1 = Left SignatureTooLong
+	| otherwise       = Right $ B.concat [B.singleton 0,B.singleton 1,padding,B.singleton 0,signature]
+	where
+		signature = descr `B.append` hash m
+		siglen    = B.length signature
+		padding   = B.replicate (klen - siglen - 3) 0xff
 
 {- get random non-null bytes for encryption padding. -}
 getRandomBytes :: CryptoRandomGen g => g -> Int -> Either Error (ByteString, g)
