@@ -21,9 +21,6 @@ newtype Key = Key (Vector Word8)
 newtype EKey = EKey (VB.Vector (Vector Word8))
 	deriving (Show,Eq)
 
-getekey :: EKey -> Int -> Vector Word8
-getekey (EKey arrays) n = VB.unsafeIndex arrays n
-
 coreEncrypt :: EKey -> ByteString -> ByteString
 coreEncrypt key input = swapBlockInv $ aesMain 10 key $ swapBlock input
 
@@ -32,27 +29,27 @@ coreDecrypt key input = swapBlockInv $ aesMainInv 10 key $ swapBlock input
 
 aesMain :: Int -> EKey -> Vector Word8 -> Vector Word8
 aesMain nbr ekey block = flip execState block $ do
-	addRoundKey $ createRoundKey (getekey ekey 0)
+	addRoundKey $ createRoundKey ekey 0
 
 	forM_ [1..nbr-1] $ \i -> do
 		modify shiftRows
 		mixColumns
-		addRoundKey $ createRoundKey (getekey ekey i)
+		addRoundKey $ createRoundKey ekey i
 
         modify shiftRows
-        addRoundKey $ createRoundKey (getekey ekey nbr)
+        addRoundKey $ createRoundKey ekey nbr
 
 aesMainInv :: Int -> EKey -> Vector Word8 -> Vector Word8
 aesMainInv nbr ekey block = flip execState block $ do
-	addRoundKey $ createRoundKey (getekey ekey nbr)
+	addRoundKey $ createRoundKey ekey nbr
         
 	forM_ (reverse [1..nbr-1]) $ \i -> do
 		modify shiftRowsInv
-		addRoundKey $ createRoundKey (getekey ekey i)
+		addRoundKey $ createRoundKey ekey i
 		mixColumnsInv
 
         modify shiftRowsInv
-        addRoundKey $ createRoundKey (getekey ekey 0)
+        addRoundKey $ createRoundKey ekey 0
 
 {- 0 -> 0, 1 -> 4, ... -}
 swapIndexes :: Vector Int
@@ -126,8 +123,9 @@ mixColumns =
 		gm2 a = V.unsafeIndex gmtab2 $ fromIntegral a
 		gm3 a = V.unsafeIndex gmtab3 $ fromIntegral a
 
-createRoundKey :: Vector Word8 -> Vector Word8
-createRoundKey ekey = V.generate 16 (\n -> V.unsafeIndex ekey $ swapIndex n)
+createRoundKey :: EKey -> Int -> Vector Word8
+createRoundKey (EKey ks) i = V.generate 16 (\n -> V.unsafeIndex ekey $ swapIndex n)
+	where ekey = VB.unsafeIndex ks i
 
 shiftRowsInv :: Vector Word8 -> Vector Word8
 shiftRowsInv st =
