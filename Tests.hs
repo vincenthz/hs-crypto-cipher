@@ -14,6 +14,7 @@ import Data.List (intercalate)
 import Data.Char
 import Data.Bits
 import Data.Word
+import qualified Data.Vector.Unboxed as V
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as BC
 -- for DSA
@@ -22,6 +23,7 @@ import qualified Crypto.Hash.SHA1 as SHA1
 -- numbers
 import Number.ModArithmetic
 -- ciphers
+import qualified Crypto.Cipher.AES as AES
 import qualified Crypto.Cipher.RC4 as RC4
 import qualified Crypto.Cipher.Camellia as Camellia
 import qualified Crypto.Cipher.RSA as RSA
@@ -38,6 +40,17 @@ encryptBlock fi fc key plaintext =
 
 wordify :: [Char] -> [Word8]
 wordify = map (toEnum . fromEnum)
+
+vectors_aes128 =
+	[
+	  ( [0x10, 0xa5, 0x88, 0x69, 0xd7, 0x4b, 0xe5, 0xa3,0x74,0xcf,0x86,0x7c,0xfb,0x47,0x38,0x59]
+	  , B.replicate 16 0
+	  , [0x6d,0x25,0x1e,0x69,0x44,0xb0,0x51,0xe0,0x4e,0xaa,0x6f,0xb4,0xdb,0xf7,0x84,0x65]
+	  )
+	]
+
+aesInitKey = Right . AES.coreExpandKey . AES.Key . V.fromList
+aesEncrypt k v = AES.coreEncrypt k v
 
 vectors_rc4 =
 	[ (wordify "Key", "Plaintext", [ 0xBB,0xF3,0x16,0xE8,0xD9,0x40,0xAF,0x0A,0xD3 ])
@@ -76,6 +89,7 @@ vectors_camellia256 =
 
 vectors =
 	[ ("RC4",      vectors_rc4,         encryptStream RC4.initCtx RC4.encrypt)
+	, ("AES128",   vectors_aes128,      encryptBlock aesInitKey aesEncrypt)
 	, ("Camellia", vectors_camellia128, encryptBlock Camellia.initKey Camellia.encrypt)
 	]
 

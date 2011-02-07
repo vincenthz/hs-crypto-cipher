@@ -21,7 +21,9 @@ Library
                    , bytestring
                    , vector
                    , crypto-api >= 0.2
+                   , mtl
   Exposed-modules:   Crypto.Cipher.RC4
+                     Crypto.Cipher.AES
                      Crypto.Cipher.Camellia
                      Crypto.Cipher.RSA
                      Crypto.Cipher.DSA
