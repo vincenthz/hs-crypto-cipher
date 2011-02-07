@@ -227,4 +227,4 @@ main = do
 	run_test "RSA decrypt(slow).encrypt = id" prop_rsa_slow_valid
 	run_test "RSA decrypt(fast).encrypt = id" prop_rsa_fast_valid
 
-	run_test "DSA verify . sign = valid" prop_dsa_valid
+	run_test "DSA verify . sign = true" prop_dsa_valid
