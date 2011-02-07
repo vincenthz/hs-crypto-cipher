@@ -159,6 +159,16 @@ prop_rsa_valid fast (RSAMessage msg) =
 prop_rsa_fast_valid  = prop_rsa_valid True
 prop_rsa_slow_valid  = prop_rsa_valid False
 
+prop_rsa_sign_valid fast (RSAMessage msg) = (either Left (\smsg -> verify msg smsg) $ sign msg) == Right True
+	where
+		verify   = RSA.verify (SHA1.hash) sha1desc rsaPublickey
+		sign     = RSA.sign (SHA1.hash) sha1desc pk
+		sha1desc = B.pack [0x30,0x21,0x30,0x09,0x06,0x05,0x2b,0x0e,0x03, 0x02,0x1a,0x05,0x00,0x04,0x14]
+		pk       = if fast then rsaPrivatekey else rsaPrivatekey { RSA.private_p = 0, RSA.private_q = 0 }
+
+prop_rsa_sign_fast_valid = prop_rsa_sign_valid True
+prop_rsa_sign_slow_valid = prop_rsa_sign_valid False
+
 rsaPrivatekey = RSA.PrivateKey
 	{ RSA.private_sz   = 128
 	, RSA.private_n    = 140203425894164333410594309212077886844966070748523642084363106504571537866632850620326769291612455847330220940078873180639537021888802572151020701352955762744921926221566899281852945861389488419179600933178716009889963150132778947506523961974222282461654256451508762805133855866018054403911588630700228345151
@@ -223,6 +233,9 @@ main = do
 	run_test "gcde binary valid" prop_gcde_binary_valid
 	run_test "exponantiation RTL valid" prop_modexp_rtl_valid
 	run_test "inverse valid" prop_modinv_valid
+
+	run_test "RSA verify . sign(slow) = true" prop_rsa_sign_slow_valid
+	run_test "RSA verify . sign(fast) = true" prop_rsa_sign_fast_valid
 
 	run_test "RSA decrypt(slow).encrypt = id" prop_rsa_slow_valid
 	run_test "RSA decrypt(fast).encrypt = id" prop_rsa_fast_valid
