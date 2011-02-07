@@ -16,6 +16,7 @@ module Crypto.Cipher.RSA
 	, decrypt
 	, encrypt
 	, sign
+	, verify
 	) where
 
 import Control.Arrow (first)
@@ -114,6 +115,13 @@ encrypt rng pk m
 sign :: HashF -> HashASN1 -> PrivateKey -> ByteString -> Either Error ByteString
 sign hash hashdesc pk m = makeSignature hash hashdesc (private_sz pk) m >>= d pk
 	where d = if private_p pk /= 0 && private_q pk /= 0 then dpFast else dpSlow
+
+{-| verify message with the signed message -}
+verify :: HashF -> HashASN1 -> PublicKey -> ByteString -> ByteString -> Either Error Bool
+verify hash hashdesc pk m sm = do
+	s  <- makeSignature hash hashdesc (public_sz pk) m
+	em <- i2ospOf (public_sz pk) $ expmod (os2ip sm) (public_e pk) (public_n pk)
+	Right (s == em)
 
 {- makeSignature for sign and verify -}
 makeSignature :: HashF -> HashASN1 -> Int -> ByteString -> Either Error ByteString
