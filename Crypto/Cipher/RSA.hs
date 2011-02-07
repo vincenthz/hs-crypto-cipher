@@ -11,6 +11,8 @@ module Crypto.Cipher.RSA
 	( Error(..)
 	, PublicKey(..)
 	, PrivateKey(..)
+	, HashF
+	, HashASN1
 	, decrypt
 	, encrypt
 	) where
@@ -46,6 +48,9 @@ data PrivateKey = PrivateKey
 	, private_dQ   :: Integer -- ^ d mod (q-1)
 	, private_qinv :: Integer -- ^ q^(-1) mod p
 	} deriving (Show)
+
+type HashF = ByteString -> ByteString
+type HashASN1 = ByteString
 
 #if ! (MIN_VERSION_base(4,3,0))
 instance Monad (Either Error) where
