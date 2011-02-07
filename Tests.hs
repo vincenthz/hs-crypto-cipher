@@ -152,12 +152,12 @@ rng = Rng (1,2)
 {- testing RSA -}
 {-----------------------------------------------------------------------------------------------}
 
-prop_rsa_fast_valid (RSAMessage msg) =
-	(either Left (RSA.decrypt rsaPrivatekey . fst) $ RSA.encrypt rng rsaPublickey msg) == Right msg
-
-prop_rsa_slow_valid (RSAMessage msg) =
+prop_rsa_valid fast (RSAMessage msg) =
 	(either Left (RSA.decrypt pk . fst) $ RSA.encrypt rng rsaPublickey msg) == Right msg
-	where pk = rsaPrivatekey { RSA.private_p = 0, RSA.private_q = 0 }
+	where pk       = if fast then rsaPrivatekey else rsaPrivatekey { RSA.private_p = 0, RSA.private_q = 0 }
+
+prop_rsa_fast_valid  = prop_rsa_valid True
+prop_rsa_slow_valid  = prop_rsa_valid False
 
 rsaPrivatekey = RSA.PrivateKey
 	{ RSA.private_sz   = 128
