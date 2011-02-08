@@ -260,6 +260,23 @@ prop_dsa_valid (RSAMessage msg) =
 		Right (signature, rng') = DSA.sign rng (SHA1.hash) dsaPrivatekey msg
 
 {-----------------------------------------------------------------------------------------------}
+{- testing AES -}
+{-----------------------------------------------------------------------------------------------}
+data AES128Message = AES128Message B.ByteString B.ByteString deriving (Show, Eq)
+
+instance Arbitrary AES128Message where
+	arbitrary = do
+		sz <- choose (1, 12)
+		ws <- replicateM (sz*16) (choose (0,255) :: Gen Int)
+		key <- replicateM 16 (choose (0,255) :: Gen Int)
+		return $ AES128Message (B.pack $ map fromIntegral key) (B.pack $ map fromIntegral ws)
+
+prop_aes128_valid (AES128Message key msg) =
+	let (Right k) = AES.initKey128 key in
+	let emsg = AES.encrypt k msg in
+	AES.decrypt k emsg == msg
+
+{-----------------------------------------------------------------------------------------------}
 {- main -}
 {-----------------------------------------------------------------------------------------------}
 
@@ -286,3 +303,5 @@ main = do
 	run_test "RSA decrypt(fast).encrypt = id" prop_rsa_fast_valid
 
 	run_test "DSA verify . sign = true" prop_dsa_valid
+
+	run_test "AES128 decrypt.encrypt = id" prop_aes128_valid
