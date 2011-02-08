@@ -10,14 +10,13 @@ module Crypto.Cipher.AES
 import Data.Word
 import Data.Vector.Unboxed (Vector, (//))
 import qualified Data.Vector.Unboxed as V
-import qualified Data.Vector as VB
 import Data.Bits
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Unsafe as B
 import Control.Monad.State.Strict
 
-newtype Key = Key (Int, VB.Vector (Vector Word8))
+newtype Key = Key (Int, Vector Word8)
 	deriving (Show,Eq)
 
 coreEncrypt :: Key -> ByteString -> ByteString
@@ -71,7 +70,7 @@ swapIndex :: Int -> Int
 swapIndex i = V.unsafeIndex swapIndexes i
 
 coreExpandKey :: Int -> Vector Word8 -> Key
-coreExpandKey nbr vkey = Key (nbr, VB.fromList (ek0 : ekN))
+coreExpandKey nbr vkey = Key (nbr, V.concat (ek0 : ekN))
 	where
 		ek0 = vkey
 		ekN = reverse $ snd $ foldl generateFold (ek0, []) [1..nbr]
@@ -130,8 +129,7 @@ mixColumns =
 		gm3 a = V.unsafeIndex gmtab3 $ fromIntegral a
 
 createRoundKey :: Key -> Int -> Vector Word8
-createRoundKey (Key (_, ks)) i = V.generate 16 (\n -> V.unsafeIndex key $ swapIndex n)
-	where key = VB.unsafeIndex ks i
+createRoundKey (Key (_, key)) i = V.generate 16 (\n -> V.unsafeIndex key (16 * i + swapIndex n))
 
 shiftRowsInv :: Vector Word8 -> Vector Word8
 shiftRowsInv st =
