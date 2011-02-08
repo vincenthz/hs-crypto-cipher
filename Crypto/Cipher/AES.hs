@@ -3,6 +3,7 @@ module Crypto.Cipher.AES
 	, encrypt
 	, decrypt
 	, initKey128
+	-- * those key sizes are not actually working right now.
 	, initKey192
 	, initKey256
 	) where
