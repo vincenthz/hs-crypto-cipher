@@ -49,7 +49,7 @@ vectors_aes128 =
 	  )
 	]
 
-aesInitKey = Right . AES.coreExpandKey . AES.Key . V.fromList
+aesInitKey = AES.initKey128 . B.pack
 aesEncrypt k v = AES.coreEncrypt k v
 
 vectors_rc4 =
