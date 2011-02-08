@@ -95,7 +95,6 @@ vectors_aes192 =
 
 aes128InitKey = AES.initKey128 . B.pack
 aes192InitKey = AES.initKey192 . B.pack
-aesEncrypt k v = AES.coreEncrypt k v
 
 vectors_rc4 =
 	[ (wordify "Key", "Plaintext", [ 0xBB,0xF3,0x16,0xE8,0xD9,0x40,0xAF,0x0A,0xD3 ])
@@ -134,8 +133,8 @@ vectors_camellia256 =
 
 vectors =
 	[ ("RC4",      vectors_rc4,         encryptStream RC4.initCtx RC4.encrypt)
-	, ("AES128",   vectors_aes128,      encryptBlock aes128InitKey aesEncrypt)
-	, ("AES192",   vectors_aes192,      encryptBlock aes192InitKey aesEncrypt)
+	, ("AES128",   vectors_aes128,      encryptBlock aes128InitKey AES.encrypt)
+	, ("AES192",   vectors_aes192,      encryptBlock aes192InitKey AES.encrypt)
 	, ("Camellia", vectors_camellia128, encryptBlock Camellia.initKey Camellia.encrypt)
 	]
 
