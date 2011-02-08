@@ -1,7 +1,7 @@
 module Crypto.Cipher.AES
 	( Key
-	, coreEncrypt
-	, coreDecrypt
+	, encrypt
+	, decrypt
 	, initKey128
 	, initKey192
 	, initKey256
@@ -18,6 +18,25 @@ import Control.Monad.State.Strict
 
 newtype Key = Key (Int, Vector Word8)
 	deriving (Show,Eq)
+
+{- | encrypt with the key a bytestring and returns the encrypted bytestring -}
+encrypt :: Key -> B.ByteString -> B.ByteString
+encrypt key b
+	| B.length b `mod` 16 == 0 = B.concat $ doChunks (coreEncrypt key) b
+	| otherwise                = error "wrong length"
+
+{- | decrypt with the key a bytestring and returns the encrypted bytestring -}
+decrypt :: Key -> B.ByteString -> B.ByteString
+decrypt key b
+	| B.length b `mod` 16 == 0 = B.concat $ doChunks (coreDecrypt key) b
+	| otherwise                = error "wrong length"
+
+doChunks :: (B.ByteString -> B.ByteString) -> B.ByteString -> [B.ByteString]
+doChunks f b =
+	let (x, rest) = B.splitAt 16 b in
+	if B.length rest >= 16
+		then f x : doChunks f rest
+		else [ f x ]
 
 coreEncrypt :: Key -> ByteString -> ByteString
 coreEncrypt key input = swapBlockInv $ aesMain 10 key $ swapBlock input
