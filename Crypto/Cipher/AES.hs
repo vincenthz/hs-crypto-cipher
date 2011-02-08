@@ -1,9 +1,10 @@
 module Crypto.Cipher.AES
-	( Key(..)
-	, EKey(..)
+	( Key
 	, coreEncrypt
 	, coreDecrypt
-	, coreExpandKey
+	, initKey128
+	, initKey192
+	, initKey256
 	) where
 
 import Data.Word
@@ -16,40 +17,52 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Unsafe as B
 import Control.Monad.State.Strict
 
-newtype Key = Key (Vector Word8)
-	deriving (Show,Eq)
-newtype EKey = EKey (VB.Vector (Vector Word8))
+newtype Key = Key (Int, VB.Vector (Vector Word8))
 	deriving (Show,Eq)
 
-coreEncrypt :: EKey -> ByteString -> ByteString
+coreEncrypt :: Key -> ByteString -> ByteString
 coreEncrypt key input = swapBlockInv $ aesMain 10 key $ swapBlock input
 
-coreDecrypt :: EKey -> ByteString -> ByteString
+coreDecrypt :: Key -> ByteString -> ByteString
 coreDecrypt key input = swapBlockInv $ aesMainInv 10 key $ swapBlock input
 
-aesMain :: Int -> EKey -> Vector Word8 -> Vector Word8
-aesMain nbr ekey block = flip execState block $ do
-	addRoundKey $ createRoundKey ekey 0
+initKey128 :: ByteString -> Either String Key
+initKey128 = initKey 16 10
+
+initKey192 :: ByteString -> Either String Key
+initKey192 = initKey 24 12
+
+initKey256 :: ByteString -> Either String Key
+initKey256 = initKey 32 14
+
+initKey :: Int -> Int -> ByteString -> Either String Key
+initKey sz nbr b
+	| B.length b == sz = Right $ coreExpandKey nbr (V.generate sz $ B.unsafeIndex b)
+	| otherwise        = Left "wrong key size"
+
+aesMain :: Int -> Key -> Vector Word8 -> Vector Word8
+aesMain nbr key block = flip execState block $ do
+	addRoundKey $ createRoundKey key 0
 
 	forM_ [1..nbr-1] $ \i -> do
 		modify shiftRows
 		mixColumns
-		addRoundKey $ createRoundKey ekey i
+		addRoundKey $ createRoundKey key i
 
         modify shiftRows
-        addRoundKey $ createRoundKey ekey nbr
+        addRoundKey $ createRoundKey key nbr
 
-aesMainInv :: Int -> EKey -> Vector Word8 -> Vector Word8
-aesMainInv nbr ekey block = flip execState block $ do
-	addRoundKey $ createRoundKey ekey nbr
+aesMainInv :: Int -> Key -> Vector Word8 -> Vector Word8
+aesMainInv nbr key block = flip execState block $ do
+	addRoundKey $ createRoundKey key nbr
         
 	forM_ (reverse [1..nbr-1]) $ \i -> do
 		modify shiftRowsInv
-		addRoundKey $ createRoundKey ekey i
+		addRoundKey $ createRoundKey key i
 		mixColumnsInv
 
         modify shiftRowsInv
-        addRoundKey $ createRoundKey ekey 0
+        addRoundKey $ createRoundKey key 0
 
 {- 0 -> 0, 1 -> 4, ... -}
 swapIndexes :: Vector Int
@@ -57,20 +70,13 @@ swapIndexes = V.fromList [ 0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15 
 swapIndex :: Int -> Int
 swapIndex i = V.unsafeIndex swapIndexes i
 
-coreExpandKey :: Key -> EKey
-coreExpandKey (Key key) = EKey $ VB.fromList [ ek0, ek1, ek2, ek3, ek4, ek5, ek6, ek7, ek8, ek9, ek10 ]
+coreExpandKey :: Int -> Vector Word8 -> Key
+coreExpandKey nbr vkey = Key (nbr, VB.fromList (ek0 : ekN))
 	where
-		ek0  = key
-		ek1  = generate ek0 1
-		ek2  = generate ek1 2
-		ek3  = generate ek2 3
-		ek4  = generate ek3 4
-		ek5  = generate ek4 5
-		ek6  = generate ek5 6
-		ek7  = generate ek6 7
-		ek8  = generate ek7 8
-		ek9  = generate ek8 9
-		ek10 = generate ek9 10
+		ek0 = vkey
+		ekN = reverse $ snd $ foldl generateFold (ek0, []) [1..nbr]
+
+		generateFold (prevk, accK) it = let nk = generate prevk it in (nk, nk : accK)
 		generate prevk it =
 			let v0 = cR0 it (V.unsafeIndex prevk 12)
 			                (V.unsafeIndex prevk 13)
@@ -123,9 +129,9 @@ mixColumns =
 		gm2 a = V.unsafeIndex gmtab2 $ fromIntegral a
 		gm3 a = V.unsafeIndex gmtab3 $ fromIntegral a
 
-createRoundKey :: EKey -> Int -> Vector Word8
-createRoundKey (EKey ks) i = V.generate 16 (\n -> V.unsafeIndex ekey $ swapIndex n)
-	where ekey = VB.unsafeIndex ks i
+createRoundKey :: Key -> Int -> Vector Word8
+createRoundKey (Key (_, ks)) i = V.generate 16 (\n -> V.unsafeIndex key $ swapIndex n)
+	where key = VB.unsafeIndex ks i
 
 shiftRowsInv :: Vector Word8 -> Vector Word8
 shiftRowsInv st =
