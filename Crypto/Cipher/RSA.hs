@@ -20,7 +20,6 @@ module Crypto.Cipher.RSA
 	) where
 
 import Control.Arrow (first)
-import Control.Monad.Error ()
 import Crypto.Random
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
@@ -56,14 +55,12 @@ data PrivateKey = PrivateKey
 type HashF = ByteString -> ByteString
 type HashASN1 = ByteString
 
-{-
 #if ! (MIN_VERSION_base(4,3,0))
 instance Monad (Either Error) where
 	return          = Right
 	(Left x) >>= _  = Left x
 	(Right x) >>= f = f x
 #endif
--}
 
 padPKCS1 :: CryptoRandomGen g => g -> Int -> ByteString -> Either Error (ByteString, g)
 padPKCS1 rng len m = do
