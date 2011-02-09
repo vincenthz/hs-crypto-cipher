@@ -63,27 +63,27 @@ initKey sz nbr b
 
 aesMain :: Int -> Key -> AESState -> AESState
 aesMain nbr key block = flip execState block $ do
-	addRoundKey key 0
+	modify $ addRoundKey key 0
 
 	forM_ [1..nbr-1] $ \i -> do
 		modify shiftRows
 		mixColumns
-		addRoundKey key i
+		modify $ addRoundKey key i
 
         modify shiftRows
-        addRoundKey key nbr
+        modify $ addRoundKey key nbr
 
 aesMainInv :: Int -> Key -> AESState -> AESState
 aesMainInv nbr key block = flip execState block $ do
-	addRoundKey key nbr
+	modify $ addRoundKey key nbr
         
 	forM_ (reverse [1..nbr-1]) $ \i -> do
 		modify shiftRowsInv
-		addRoundKey key i
+		modify $ addRoundKey key i
 		mixColumnsInv
 
         modify shiftRowsInv
-        addRoundKey key 0
+        modify $ addRoundKey key 0
 
 {- 0 -> 0, 1 -> 4, ... -}
 swapIndexes :: Vector Int
@@ -127,8 +127,8 @@ shiftRows ost =
 	      , (13, V.unsafeIndex st 12), (14, V.unsafeIndex st 13), (15, V.unsafeIndex st 14), (12, V.unsafeIndex st 15)
 	      ]
 
-addRoundKey :: Key -> Int -> State (AESState) ()
-addRoundKey (Key key) i = modify (\state -> V.zipWith (\v1 v2 -> v1 `xor` v2) state rk)
+addRoundKey :: Key -> Int -> AESState -> AESState
+addRoundKey (Key key) i = V.zipWith (\v1 v2 -> v1 `xor` v2) rk
 	where
 		rk = V.generate 16 (\n -> V.unsafeIndex key (16 * i + swapIndex n))
 
