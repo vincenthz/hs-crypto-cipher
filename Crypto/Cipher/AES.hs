@@ -67,7 +67,7 @@ aesMain nbr key block = flip execState block $ do
 
 	forM_ [1..nbr-1] $ \i -> do
 		modify shiftRows
-		mixColumns
+		modify mixColumns
 		modify $ addRoundKey key i
 
         modify shiftRows
@@ -80,7 +80,7 @@ aesMainInv nbr key block = flip execState block $ do
 	forM_ (reverse [1..nbr-1]) $ \i -> do
 		modify shiftRowsInv
 		modify $ addRoundKey key i
-		mixColumnsInv
+		modify mixColumnsInv
 
         modify shiftRowsInv
         modify $ addRoundKey key 0
@@ -133,22 +133,29 @@ addRoundKey (Key key) i = V.zipWith (\v1 v2 -> v1 `xor` v2) rk
 		rk = V.generate 16 (\n -> V.unsafeIndex key (16 * i + swapIndex n))
 
 
-mixColumns :: State (AESState) ()
-mixColumns =
-	forM_ [0..3] $ \i -> do
-		state <- get
-		let cpy0 = V.unsafeIndex state (0 * 4 + i)
-		let cpy1 = V.unsafeIndex state (1 * 4 + i)
-		let cpy2 = V.unsafeIndex state (2 * 4 + i)
-		let cpy3 = V.unsafeIndex state (3 * 4 + i)
-
-		let state0  = gm2 cpy0 `xor` gm1 cpy3 `xor` gm1 cpy2 `xor` gm3 cpy1
-                let state4  = gm2 cpy1 `xor` gm1 cpy0 `xor` gm1 cpy3 `xor` gm3 cpy2
-                let state8  = gm2 cpy2 `xor` gm1 cpy1 `xor` gm1 cpy0 `xor` gm3 cpy3
-                let state12 = gm2 cpy3 `xor` gm1 cpy2 `xor` gm1 cpy1 `xor` gm3 cpy0
-
-		put (state // [ (i, state0), (4+i, state4), (8+i, state8), (12+i, state12) ])
+mixColumns :: AESState -> AESState
+mixColumns state =
+	let (state0, state4, state8, state12)  = pr 0 in
+	let (state1, state5, state9, state13)  = pr 1 in
+	let (state2, state6, state10, state14) = pr 2 in
+	let (state3, state7, state11, state15) = pr 3 in
+	state //
+		[ (0,state0), (1,state1), (2,state2), (3,state3)
+		, (4,state4), (5,state5), (6,state6), (7,state7)
+		, (8,state8), (9,state9), (10,state10), (11,state11)
+		, (12,state12), (13,state13), (14,state14), (15,state15)
+		]
 	where
+		pr i =
+			let cpy0 = V.unsafeIndex state (0 * 4 + i) in
+			let cpy1 = V.unsafeIndex state (1 * 4 + i) in
+			let cpy2 = V.unsafeIndex state (2 * 4 + i) in
+			let cpy3 = V.unsafeIndex state (3 * 4 + i) in
+
+			(gm2 cpy0 `xor` gm1 cpy3 `xor` gm1 cpy2 `xor` gm3 cpy1
+			,gm2 cpy1 `xor` gm1 cpy0 `xor` gm1 cpy3 `xor` gm3 cpy2
+			,gm2 cpy2 `xor` gm1 cpy1 `xor` gm1 cpy0 `xor` gm3 cpy3
+			,gm2 cpy3 `xor` gm1 cpy2 `xor` gm1 cpy1 `xor` gm3 cpy0)
 		gm1 a = a
 		gm2 a = V.unsafeIndex gmtab2 $ fromIntegral a
 		gm3 a = V.unsafeIndex gmtab3 $ fromIntegral a
@@ -162,22 +169,29 @@ shiftRowsInv st =
 		] in
 	V.map mRsbox nst
 
-mixColumnsInv :: State (AESState) ()
-mixColumnsInv =
-	forM_ [0..3] $ \i -> do
-		state <- get
-		let cpy0 = V.unsafeIndex state (0 * 4 + i)
-		let cpy1 = V.unsafeIndex state (1 * 4 + i)
-		let cpy2 = V.unsafeIndex state (2 * 4 + i)
-		let cpy3 = V.unsafeIndex state (3 * 4 + i)
-
-		let state0  = gm14 cpy0 `xor` gm9 cpy3 `xor` gm13 cpy2 `xor` gm11 cpy1
-		let state4  = gm14 cpy1 `xor` gm9 cpy0 `xor` gm13 cpy3 `xor` gm11 cpy2
-		let state8  = gm14 cpy2 `xor` gm9 cpy1 `xor` gm13 cpy0 `xor` gm11 cpy3
-		let state12 = gm14 cpy3 `xor` gm9 cpy2 `xor` gm13 cpy1 `xor` gm11 cpy0
-
-		put (state // [ (i, state0), (4+i, state4), (8+i, state8), (12+i, state12) ])
+mixColumnsInv :: AESState -> AESState
+mixColumnsInv state =
+	let (state0, state4, state8, state12)  = pr 0 in
+	let (state1, state5, state9, state13)  = pr 1 in
+	let (state2, state6, state10, state14) = pr 2 in
+	let (state3, state7, state11, state15) = pr 3 in
+	state //
+		[ (0,state0), (1,state1), (2,state2), (3,state3)
+		, (4,state4), (5,state5), (6,state6), (7,state7)
+		, (8,state8), (9,state9), (10,state10), (11,state11)
+		, (12,state12), (13,state13), (14,state14), (15,state15)
+		]
 	where
+		pr i = 
+			let cpy0 = V.unsafeIndex state (0 * 4 + i) in
+			let cpy1 = V.unsafeIndex state (1 * 4 + i) in
+			let cpy2 = V.unsafeIndex state (2 * 4 + i) in
+			let cpy3 = V.unsafeIndex state (3 * 4 + i) in
+
+			(gm14 cpy0 `xor` gm9 cpy3 `xor` gm13 cpy2 `xor` gm11 cpy1
+			,gm14 cpy1 `xor` gm9 cpy0 `xor` gm13 cpy3 `xor` gm11 cpy2
+			,gm14 cpy2 `xor` gm9 cpy1 `xor` gm13 cpy0 `xor` gm11 cpy3
+			,gm14 cpy3 `xor` gm9 cpy2 `xor` gm13 cpy1 `xor` gm11 cpy0)
 		gm14 a = V.unsafeIndex gmtab14 $ fromIntegral a
 		gm13 a = V.unsafeIndex gmtab13 $ fromIntegral a
 		gm11 a = V.unsafeIndex gmtab11 $ fromIntegral a
