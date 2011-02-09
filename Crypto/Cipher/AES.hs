@@ -17,7 +17,7 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Unsafe as B
 import Control.Monad.State.Strict
 
-newtype Key = Key (Int, Vector Word8)
+newtype Key = Key (Vector Word8)
 	deriving (Show,Eq)
 
 {- | encrypt with the key a bytestring and returns the encrypted bytestring -}
@@ -90,7 +90,7 @@ swapIndex :: Int -> Int
 swapIndex i = V.unsafeIndex swapIndexes i
 
 coreExpandKey :: Int -> Vector Word8 -> Key
-coreExpandKey nbr vkey = Key (nbr, V.concat (ek0 : ekN))
+coreExpandKey nbr vkey = Key (V.concat (ek0 : ekN))
 	where
 		ek0 = vkey
 		ekN = reverse $ snd $ foldl generateFold (ek0, []) [1..nbr]
@@ -126,7 +126,7 @@ shiftRows ost =
 	      ]
 
 addRoundKey :: Key -> Int -> State (Vector Word8) ()
-addRoundKey (Key (_, key)) i = modify (\state -> V.zipWith (\v1 v2 -> v1 `xor` v2) state rk)
+addRoundKey (Key key) i = modify (\state -> V.zipWith (\v1 v2 -> v1 `xor` v2) state rk)
 	where
 		rk = V.generate 16 (\n -> V.unsafeIndex key (16 * i + swapIndex n))
 
