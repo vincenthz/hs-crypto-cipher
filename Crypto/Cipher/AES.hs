@@ -11,11 +11,11 @@ module Crypto.Cipher.AES
 import Data.Word
 import Data.Vector.Unboxed (Vector, (//))
 import qualified Data.Vector.Unboxed as V
+import Data.List (foldl')
 import Data.Bits
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Unsafe as B
-import Control.Monad.State.Strict
 
 newtype Key = Key (Vector Word8)
 	deriving (Show,Eq)
@@ -62,18 +62,16 @@ initKey sz nbr b
 	| otherwise        = Left "wrong key size"
 
 aesMain :: Int -> Key -> AESState -> AESState
-aesMain nbr key block = flip execState block $ do
-	modify $ addRoundKey key 0
-	forM_ [1..nbr-1] $ \i -> do
-		modify (addRoundKey key i . mixColumns . shiftRows)
-	modify (addRoundKey key nbr . shiftRows)
+aesMain nbr key block =
+	addRoundKey key nbr $! shiftRows $! mrounds $! addRoundKey key 0 block
+	where
+		mrounds b = foldl' (\bk i -> addRoundKey key i $! mixColumns $! shiftRows bk) b [1..nbr-1]
 
 aesMainInv :: Int -> Key -> AESState -> AESState
-aesMainInv nbr key block = flip execState block $ do
-	modify $ addRoundKey key nbr
-	forM_ (reverse [1..nbr-1]) $ \i -> do
-		modify (mixColumnsInv . addRoundKey key i . shiftRowsInv)
-	modify (addRoundKey key 0 . shiftRowsInv)
+aesMainInv nbr key block =
+	addRoundKey key 0 $! shiftRowsInv $! mrounds $! addRoundKey key nbr block
+	where
+		mrounds b = foldl' (\bk i -> mixColumnsInv $! addRoundKey key i $! shiftRowsInv bk) b (reverse [1..nbr-1])
 
 {- 0 -> 0, 1 -> 4, ... -}
 swapIndexes :: Vector Int
