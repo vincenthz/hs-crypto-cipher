@@ -64,26 +64,16 @@ initKey sz nbr b
 aesMain :: Int -> Key -> AESState -> AESState
 aesMain nbr key block = flip execState block $ do
 	modify $ addRoundKey key 0
-
 	forM_ [1..nbr-1] $ \i -> do
-		modify shiftRows
-		modify mixColumns
-		modify $ addRoundKey key i
-
-        modify shiftRows
-        modify $ addRoundKey key nbr
+		modify (addRoundKey key i . mixColumns . shiftRows)
+	modify (addRoundKey key nbr . shiftRows)
 
 aesMainInv :: Int -> Key -> AESState -> AESState
 aesMainInv nbr key block = flip execState block $ do
 	modify $ addRoundKey key nbr
-        
 	forM_ (reverse [1..nbr-1]) $ \i -> do
-		modify shiftRowsInv
-		modify $ addRoundKey key i
-		modify mixColumnsInv
-
-        modify shiftRowsInv
-        modify $ addRoundKey key 0
+		modify (mixColumnsInv . addRoundKey key i . shiftRowsInv)
+	modify (addRoundKey key 0 . shiftRowsInv)
 
 {- 0 -> 0, 1 -> 4, ... -}
 swapIndexes :: Vector Int
