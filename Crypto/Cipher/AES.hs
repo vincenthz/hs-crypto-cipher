@@ -61,27 +61,27 @@ initKey sz nbr b
 
 aesMain :: Int -> Key -> Vector Word8 -> Vector Word8
 aesMain nbr key block = flip execState block $ do
-	addRoundKey $ createRoundKey key 0
+	addRoundKey key 0
 
 	forM_ [1..nbr-1] $ \i -> do
 		modify shiftRows
 		mixColumns
-		addRoundKey $ createRoundKey key i
+		addRoundKey key i
 
         modify shiftRows
-        addRoundKey $ createRoundKey key nbr
+        addRoundKey key nbr
 
 aesMainInv :: Int -> Key -> Vector Word8 -> Vector Word8
 aesMainInv nbr key block = flip execState block $ do
-	addRoundKey $ createRoundKey key nbr
+	addRoundKey key nbr
         
 	forM_ (reverse [1..nbr-1]) $ \i -> do
 		modify shiftRowsInv
-		addRoundKey $ createRoundKey key i
+		addRoundKey key i
 		mixColumnsInv
 
         modify shiftRowsInv
-        addRoundKey $ createRoundKey key 0
+        addRoundKey key 0
 
 {- 0 -> 0, 1 -> 4, ... -}
 swapIndexes :: Vector Int
@@ -125,8 +125,11 @@ shiftRows ost =
 	      , (13, V.unsafeIndex st 12), (14, V.unsafeIndex st 13), (15, V.unsafeIndex st 14), (12, V.unsafeIndex st 15)
 	      ]
 
-addRoundKey :: Vector Word8 -> State (Vector Word8) ()
-addRoundKey rk = modify (\state -> V.zipWith (\v1 v2 -> v1 `xor` v2) state rk)
+addRoundKey :: Key -> Int -> State (Vector Word8) ()
+addRoundKey (Key (_, key)) i = modify (\state -> V.zipWith (\v1 v2 -> v1 `xor` v2) state rk)
+	where
+		rk = V.generate 16 (\n -> V.unsafeIndex key (16 * i + swapIndex n))
+
 
 mixColumns :: State (Vector Word8) ()
 mixColumns =
@@ -147,9 +150,6 @@ mixColumns =
 		gm1 a = a
 		gm2 a = V.unsafeIndex gmtab2 $ fromIntegral a
 		gm3 a = V.unsafeIndex gmtab3 $ fromIntegral a
-
-createRoundKey :: Key -> Int -> Vector Word8
-createRoundKey (Key (_, key)) i = V.generate 16 (\n -> V.unsafeIndex key (16 * i + swapIndex n))
 
 shiftRowsInv :: Vector Word8 -> Vector Word8
 shiftRowsInv st =
