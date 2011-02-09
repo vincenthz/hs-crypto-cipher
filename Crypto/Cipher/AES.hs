@@ -20,6 +20,8 @@ import Control.Monad.State.Strict
 newtype Key = Key (Vector Word8)
 	deriving (Show,Eq)
 
+type AESState = Vector Word8
+
 {- | encrypt with the key a bytestring and returns the encrypted bytestring -}
 encrypt :: Key -> B.ByteString -> B.ByteString
 encrypt key b
@@ -59,7 +61,7 @@ initKey sz nbr b
 	| B.length b == sz = Right $ coreExpandKey nbr (V.generate sz $ B.unsafeIndex b)
 	| otherwise        = Left "wrong key size"
 
-aesMain :: Int -> Key -> Vector Word8 -> Vector Word8
+aesMain :: Int -> Key -> AESState -> AESState
 aesMain nbr key block = flip execState block $ do
 	addRoundKey key 0
 
@@ -71,7 +73,7 @@ aesMain nbr key block = flip execState block $ do
         modify shiftRows
         addRoundKey key nbr
 
-aesMainInv :: Int -> Key -> Vector Word8 -> Vector Word8
+aesMainInv :: Int -> Key -> AESState -> AESState
 aesMainInv nbr key block = flip execState block $ do
 	addRoundKey key nbr
         
@@ -117,7 +119,7 @@ coreExpandKey nbr vkey = Key (V.concat (ek0 : ekN))
 		cR0 it r0 r1 r2 r3 =
 			(mSbox r1 `xor` mRcon it, mSbox r2, mSbox r3, mSbox r0)
 
-shiftRows :: Vector Word8 -> Vector Word8
+shiftRows :: AESState -> AESState
 shiftRows ost =
 	let st = V.map mSbox ost in
 	st // [ (7, V.unsafeIndex st 4), (4, V.unsafeIndex st 5), (5, V.unsafeIndex st 6), (6, V.unsafeIndex st 7)
@@ -125,13 +127,13 @@ shiftRows ost =
 	      , (13, V.unsafeIndex st 12), (14, V.unsafeIndex st 13), (15, V.unsafeIndex st 14), (12, V.unsafeIndex st 15)
 	      ]
 
-addRoundKey :: Key -> Int -> State (Vector Word8) ()
+addRoundKey :: Key -> Int -> State (AESState) ()
 addRoundKey (Key key) i = modify (\state -> V.zipWith (\v1 v2 -> v1 `xor` v2) state rk)
 	where
 		rk = V.generate 16 (\n -> V.unsafeIndex key (16 * i + swapIndex n))
 
 
-mixColumns :: State (Vector Word8) ()
+mixColumns :: State (AESState) ()
 mixColumns =
 	forM_ [0..3] $ \i -> do
 		state <- get
@@ -151,7 +153,7 @@ mixColumns =
 		gm2 a = V.unsafeIndex gmtab2 $ fromIntegral a
 		gm3 a = V.unsafeIndex gmtab3 $ fromIntegral a
 
-shiftRowsInv :: Vector Word8 -> Vector Word8
+shiftRowsInv :: AESState -> AESState
 shiftRowsInv st =
 	let nst = st //
 		[ (5, V.unsafeIndex st 4), (6, V.unsafeIndex st 5), (7, V.unsafeIndex st 6), (4, V.unsafeIndex st 7)
@@ -160,7 +162,7 @@ shiftRowsInv st =
 		] in
 	V.map mRsbox nst
 
-mixColumnsInv :: State (Vector Word8) ()
+mixColumnsInv :: State (AESState) ()
 mixColumnsInv =
 	forM_ [0..3] $ \i -> do
 		state <- get
@@ -181,10 +183,10 @@ mixColumnsInv =
 		gm11 a = V.unsafeIndex gmtab11 $ fromIntegral a
 		gm9 a  = V.unsafeIndex gmtab9 $ fromIntegral a
 
-swapBlock :: ByteString -> Vector Word8
+swapBlock :: ByteString -> AESState
 swapBlock b = V.generate 16 (\i -> B.unsafeIndex b $ swapIndex i)
 
-swapBlockInv :: Vector Word8 -> ByteString
+swapBlockInv :: AESState -> ByteString
 swapBlockInv v = B.pack $ map (V.unsafeIndex v . swapIndex) [0..15]
 
 mSbox :: Word8 -> Word8
