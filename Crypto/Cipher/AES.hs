@@ -9,18 +9,24 @@ module Crypto.Cipher.AES
 	) where
 
 import Data.Word
-import Data.Vector.Unboxed (Vector, (//))
+import Data.Vector.Unboxed (Vector)
+import Data.Vector.Unboxed.Mutable (IOVector)
 import qualified Data.Vector.Unboxed as V
-import Data.List (foldl')
+import qualified Data.Vector.Unboxed.Mutable as M
 import Data.Bits
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Unsafe as B
+import qualified Data.ByteString.Internal as B
+import System.IO.Unsafe (unsafePerformIO)
+import Control.Monad (forM_)
+
+import Foreign.Storable
 
 newtype Key = Key (Vector Word8)
 	deriving (Show,Eq)
 
-type AESState = Vector Word8
+type AESState = IOVector Word8
 
 {- | encrypt with the key a bytestring and returns the encrypted bytestring -}
 encrypt :: Key -> B.ByteString -> B.ByteString
@@ -42,10 +48,16 @@ doChunks f b =
 		else [ f x ]
 
 coreEncrypt :: Key -> ByteString -> ByteString
-coreEncrypt key input = swapBlockInv $ aesMain 10 key $ swapBlock input
+coreEncrypt key input = unsafePerformIO $ do
+	blk <- swapBlock input
+	aesMain 10 key blk
+	swapBlockInv blk
 
 coreDecrypt :: Key -> ByteString -> ByteString
-coreDecrypt key input = swapBlockInv $ aesMainInv 10 key $ swapBlock input
+coreDecrypt key input = unsafePerformIO $ do
+	blk <- swapBlock input
+	aesMainInv 10 key blk
+	swapBlockInv blk
 
 initKey128 :: ByteString -> Either String Key
 initKey128 = initKey 16 10
@@ -61,17 +73,19 @@ initKey sz nbr b
 	| B.length b == sz = Right $ coreExpandKey nbr (V.generate sz $ B.unsafeIndex b)
 	| otherwise        = Left "wrong key size"
 
-aesMain :: Int -> Key -> AESState -> AESState
-aesMain nbr key block =
-	addRoundKey key nbr $! shiftRows $! mrounds $! addRoundKey key 0 block
-	where
-		mrounds b = foldl' (\bk i -> addRoundKey key i $! mixColumns $! shiftRows bk) b [1..nbr-1]
+aesMain :: Int -> Key -> AESState -> IO ()
+aesMain nbr key blk = do
+	addRoundKey key 0 blk
+	forM_ [1..nbr-1] $ \i -> do
+		shiftRows blk >> mixColumns blk >> addRoundKey key i blk
+	shiftRows blk >> addRoundKey key nbr blk
 
-aesMainInv :: Int -> Key -> AESState -> AESState
-aesMainInv nbr key block =
-	addRoundKey key 0 $! shiftRowsInv $! mrounds $! addRoundKey key nbr block
-	where
-		mrounds b = foldl' (\bk i -> mixColumnsInv $! addRoundKey key i $! shiftRowsInv bk) b (reverse [1..nbr-1])
+aesMainInv :: Int -> Key -> AESState -> IO ()
+aesMainInv nbr key blk = do
+	addRoundKey key nbr blk
+	forM_ (reverse [1..nbr-1]) $ \i -> do
+		shiftRowsInv blk >> addRoundKey key i blk >> mixColumnsInv blk
+	shiftRowsInv blk >> addRoundKey key 0 blk
 
 {- 0 -> 0, 1 -> 4, ... -}
 swapIndexes :: Vector Int
@@ -107,89 +121,97 @@ coreExpandKey nbr vkey = Key (V.concat (ek0 : ekN))
 		cR0 it r0 r1 r2 r3 =
 			(mSbox r1 `xor` mRcon it, mSbox r2, mSbox r3, mSbox r0)
 
-shiftRows :: AESState -> AESState
-shiftRows ost =
-	let st = V.map mSbox ost in
-	st // [ (7, V.unsafeIndex st 4), (4, V.unsafeIndex st 5), (5, V.unsafeIndex st 6), (6, V.unsafeIndex st 7)
-	      , (10, V.unsafeIndex st 8), (11, V.unsafeIndex st 9), (8, V.unsafeIndex st 10), (9, V.unsafeIndex st 11)
-	      , (13, V.unsafeIndex st 12), (14, V.unsafeIndex st 13), (15, V.unsafeIndex st 14), (12, V.unsafeIndex st 15)
-	      ]
-
-addRoundKey :: Key -> Int -> AESState -> AESState
-addRoundKey (Key key) i = V.zipWith (\v1 v2 -> v1 `xor` v2) rk
+shiftRows :: AESState -> IO ()
+shiftRows blk = do
+	vmap mSbox
+	-- rol 1 on block[4..7]
+	t1 <- M.unsafeRead blk 4
+	vmove 5 4 >> vmove 6 5 >> vmove 7 6 >> M.unsafeWrite blk 7 t1
+	-- rol 2 on block[8..11]
+	M.unsafeSwap blk 8 10 >> M.unsafeSwap blk 9 11
+	-- rol 3 on block[12..15]
+	t2 <- M.unsafeRead blk 15
+	vmove 14 15 >> vmove 13 14 >> vmove 12 13 >> M.unsafeWrite blk 12 t2
 	where
-		rk = V.generate 16 (\n -> V.unsafeIndex key (16 * i + swapIndex n))
+		vmap f = forM_ [0..15] $ \i -> M.unsafeRead blk i >>= M.unsafeWrite blk i . f
+		vmove s d = M.unsafeRead blk s >>= M.unsafeWrite blk d
 
+addRoundKey :: Key -> Int -> AESState -> IO ()
+addRoundKey (Key key) n blk =
+	forM_ [0..15] $ \i -> do
+		v <- M.unsafeRead blk i
+		M.unsafeWrite blk i (v `xor` V.unsafeIndex key (n*16+ swapIndex i)) 
 
-mixColumns :: AESState -> AESState
-mixColumns state =
-	let (state0, state4, state8, state12)  = pr 0 in
-	let (state1, state5, state9, state13)  = pr 1 in
-	let (state2, state6, state10, state14) = pr 2 in
-	let (state3, state7, state11, state15) = pr 3 in
-	state //
-		[ (0,state0), (1,state1), (2,state2), (3,state3)
-		, (4,state4), (5,state5), (6,state6), (7,state7)
-		, (8,state8), (9,state9), (10,state10), (11,state11)
-		, (12,state12), (13,state13), (14,state14), (15,state15)
-		]
+mixColumns :: AESState -> IO ()
+mixColumns state = pr 0 >> pr 1 >> pr 2 >> pr 3
 	where
-		pr i =
-			let cpy0 = V.unsafeIndex state (0 * 4 + i) in
-			let cpy1 = V.unsafeIndex state (1 * 4 + i) in
-			let cpy2 = V.unsafeIndex state (2 * 4 + i) in
-			let cpy3 = V.unsafeIndex state (3 * 4 + i) in
+		pr i = do
+			cpy0 <- M.unsafeRead state (0 * 4 + i)
+			cpy1 <- M.unsafeRead state (1 * 4 + i)
+			cpy2 <- M.unsafeRead state (2 * 4 + i)
+			cpy3 <- M.unsafeRead state (3 * 4 + i)
 
-			(gm2 cpy0 `xor` gm1 cpy3 `xor` gm1 cpy2 `xor` gm3 cpy1
-			,gm2 cpy1 `xor` gm1 cpy0 `xor` gm1 cpy3 `xor` gm3 cpy2
-			,gm2 cpy2 `xor` gm1 cpy1 `xor` gm1 cpy0 `xor` gm3 cpy3
-			,gm2 cpy3 `xor` gm1 cpy2 `xor` gm1 cpy1 `xor` gm3 cpy0)
+			let state0 = gm2 cpy0 `xor` gm1 cpy3 `xor` gm1 cpy2 `xor` gm3 cpy1
+			let state4 = gm2 cpy1 `xor` gm1 cpy0 `xor` gm1 cpy3 `xor` gm3 cpy2
+			let state8 = gm2 cpy2 `xor` gm1 cpy1 `xor` gm1 cpy0 `xor` gm3 cpy3
+			let state12 = gm2 cpy3 `xor` gm1 cpy2 `xor` gm1 cpy1 `xor` gm3 cpy0
+
+			M.unsafeWrite state (0 * 4 + i) state0
+			M.unsafeWrite state (1 * 4 + i) state4
+			M.unsafeWrite state (2 * 4 + i) state8
+			M.unsafeWrite state (3 * 4 + i) state12
 		gm1 a = a
 		gm2 a = V.unsafeIndex gmtab2 $ fromIntegral a
 		gm3 a = V.unsafeIndex gmtab3 $ fromIntegral a
 
-shiftRowsInv :: AESState -> AESState
-shiftRowsInv st =
-	let nst = st //
-		[ (5, V.unsafeIndex st 4), (6, V.unsafeIndex st 5), (7, V.unsafeIndex st 6), (4, V.unsafeIndex st 7)
-		, (10, V.unsafeIndex st 8), (11, V.unsafeIndex st 9), (8, V.unsafeIndex st 10), (9, V.unsafeIndex st 11)
-		, (15, V.unsafeIndex st 12), (12, V.unsafeIndex st 13), (13, V.unsafeIndex st 14), (14, V.unsafeIndex st 15)
-		] in
-	V.map mRsbox nst
-
-mixColumnsInv :: AESState -> AESState
-mixColumnsInv state =
-	let (state0, state4, state8, state12)  = pr 0 in
-	let (state1, state5, state9, state13)  = pr 1 in
-	let (state2, state6, state10, state14) = pr 2 in
-	let (state3, state7, state11, state15) = pr 3 in
-	state //
-		[ (0,state0), (1,state1), (2,state2), (3,state3)
-		, (4,state4), (5,state5), (6,state6), (7,state7)
-		, (8,state8), (9,state9), (10,state10), (11,state11)
-		, (12,state12), (13,state13), (14,state14), (15,state15)
-		]
+shiftRowsInv :: AESState -> IO ()
+shiftRowsInv blk = do
+	-- ror 1 on block[4..7]
+	t1 <- M.unsafeRead blk 7
+	vmove 6 7 >> vmove 5 6 >> vmove 4 5 >> M.unsafeWrite blk 4 t1
+	-- ror 2 on block[8..11]
+	M.unsafeSwap blk 8 10 >> M.unsafeSwap blk 9 11
+	-- ror 3 on block[12..15]
+	t2 <- M.unsafeRead blk 12
+	vmove 13 12 >> vmove 14 13 >> vmove 15 14 >> M.unsafeWrite blk 15 t2
+	vmap mRsbox
 	where
-		pr i = 
-			let cpy0 = V.unsafeIndex state (0 * 4 + i) in
-			let cpy1 = V.unsafeIndex state (1 * 4 + i) in
-			let cpy2 = V.unsafeIndex state (2 * 4 + i) in
-			let cpy3 = V.unsafeIndex state (3 * 4 + i) in
+		vmap f = forM_ [0..15] $ \i -> M.unsafeRead blk i >>= M.unsafeWrite blk i . f
+		vmove s d = M.unsafeRead blk s >>= M.unsafeWrite blk d
 
-			(gm14 cpy0 `xor` gm9 cpy3 `xor` gm13 cpy2 `xor` gm11 cpy1
-			,gm14 cpy1 `xor` gm9 cpy0 `xor` gm13 cpy3 `xor` gm11 cpy2
-			,gm14 cpy2 `xor` gm9 cpy1 `xor` gm13 cpy0 `xor` gm11 cpy3
-			,gm14 cpy3 `xor` gm9 cpy2 `xor` gm13 cpy1 `xor` gm11 cpy0)
+mixColumnsInv :: AESState -> IO ()
+mixColumnsInv state = pr 0 >> pr 1 >> pr 2 >> pr 3
+	where
+		pr i = do
+			cpy0 <- M.unsafeRead state (0 * 4 + i)
+			cpy1 <- M.unsafeRead state (1 * 4 + i)
+			cpy2 <- M.unsafeRead state (2 * 4 + i)
+			cpy3 <- M.unsafeRead state (3 * 4 + i)
+
+			let state0  = gm14 cpy0 `xor` gm9 cpy3 `xor` gm13 cpy2 `xor` gm11 cpy1
+			let state4  = gm14 cpy1 `xor` gm9 cpy0 `xor` gm13 cpy3 `xor` gm11 cpy2
+			let state8  = gm14 cpy2 `xor` gm9 cpy1 `xor` gm13 cpy0 `xor` gm11 cpy3
+			let state12 = gm14 cpy3 `xor` gm9 cpy2 `xor` gm13 cpy1 `xor` gm11 cpy0
+
+			M.unsafeWrite state (0 * 4 + i) state0
+			M.unsafeWrite state (1 * 4 + i) state4
+			M.unsafeWrite state (2 * 4 + i) state8
+			M.unsafeWrite state (3 * 4 + i) state12
+
 		gm14 a = V.unsafeIndex gmtab14 $ fromIntegral a
 		gm13 a = V.unsafeIndex gmtab13 $ fromIntegral a
 		gm11 a = V.unsafeIndex gmtab11 $ fromIntegral a
 		gm9 a  = V.unsafeIndex gmtab9 $ fromIntegral a
 
-swapBlock :: ByteString -> AESState
-swapBlock b = V.generate 16 (\i -> B.unsafeIndex b $ swapIndex i)
+swapBlock :: ByteString -> IO AESState
+swapBlock b = do
+	k <- M.unsafeNew 16
+	forM_ [0..15] (\i -> M.unsafeWrite k i $ B.unsafeIndex b $ swapIndex i)
+	return k
 
-swapBlockInv :: AESState -> ByteString
-swapBlockInv v = B.pack $ map (V.unsafeIndex v . swapIndex) [0..15]
+swapBlockInv :: AESState -> IO ByteString
+swapBlockInv blk = B.create 16 copy
+	where copy ptr = mapM_ (\i -> M.unsafeRead blk (swapIndex i) >>= pokeByteOff ptr i) [0..15]
 
 mSbox :: Word8 -> Word8
 mSbox = V.unsafeIndex sbox . fromIntegral
