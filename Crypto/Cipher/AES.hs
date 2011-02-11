@@ -18,10 +18,9 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Unsafe as B
 import qualified Data.ByteString.Internal as B
-import System.IO.Unsafe (unsafePerformIO)
 import Control.Monad (forM_)
-
 import Foreign.Storable
+import Foreign.Ptr
 
 newtype Key = Key (Vector Word8)
 	deriving (Show,Eq)
@@ -31,33 +30,34 @@ type AESState = IOVector Word8
 {- | encrypt with the key a bytestring and returns the encrypted bytestring -}
 encrypt :: Key -> B.ByteString -> B.ByteString
 encrypt key b
-	| B.length b `mod` 16 == 0 = B.concat $ doChunks (coreEncrypt key) b
+	| B.length b `mod` 16 == 0 = B.unsafeCreate (B.length b) (coreEncrypt key b)
 	| otherwise                = error "wrong length"
 
 {- | decrypt with the key a bytestring and returns the encrypted bytestring -}
 decrypt :: Key -> B.ByteString -> B.ByteString
 decrypt key b
-	| B.length b `mod` 16 == 0 = B.concat $ doChunks (coreDecrypt key) b
+	| B.length b `mod` 16 == 0 = B.unsafeCreate (B.length b) (coreDecrypt key b)
 	| otherwise                = error "wrong length"
 
-doChunks :: (B.ByteString -> B.ByteString) -> B.ByteString -> [B.ByteString]
-doChunks f b =
-	let (x, rest) = B.splitAt 16 b in
-	if B.length rest >= 16
-		then f x : doChunks f rest
-		else [ f x ]
+coreEncrypt :: Key -> ByteString -> Ptr Word8 -> IO ()
+coreEncrypt key input output = M.unsafeNew 16 >>= \k -> loop k input output
+	where loop blk i o
+		| B.null i  = return ()
+		| otherwise = do
+			swapBlock i blk
+			aesMain 10 key blk
+			swapBlockInv blk o
+			loop blk (B.unsafeDrop 16 i) (o `plusPtr` 16)
 
-coreEncrypt :: Key -> ByteString -> ByteString
-coreEncrypt key input = unsafePerformIO $ do
-	blk <- swapBlock input
-	aesMain 10 key blk
-	swapBlockInv blk
-
-coreDecrypt :: Key -> ByteString -> ByteString
-coreDecrypt key input = unsafePerformIO $ do
-	blk <- swapBlock input
-	aesMainInv 10 key blk
-	swapBlockInv blk
+coreDecrypt :: Key -> ByteString -> Ptr Word8 -> IO ()
+coreDecrypt key input output = M.unsafeNew 16 >>= \k -> loop k input output
+	where loop blk i o
+		| B.null input = return ()
+		| otherwise    = do
+			swapBlock i blk
+			aesMainInv 10 key blk
+			swapBlockInv blk o
+			loop blk (B.unsafeDrop 16 i) (o `plusPtr` 16)
 
 initKey128 :: ByteString -> Either String Key
 initKey128 = initKey 16 10
@@ -203,15 +203,12 @@ mixColumnsInv state = pr 0 >> pr 1 >> pr 2 >> pr 3
 		gm11 a = V.unsafeIndex gmtab11 $ fromIntegral a
 		gm9 a  = V.unsafeIndex gmtab9 $ fromIntegral a
 
-swapBlock :: ByteString -> IO AESState
-swapBlock b = do
-	k <- M.unsafeNew 16
+swapBlock :: ByteString -> AESState -> IO ()
+swapBlock b k = do
 	forM_ [0..15] (\i -> M.unsafeWrite k i $ B.unsafeIndex b $ swapIndex i)
-	return k
 
-swapBlockInv :: AESState -> IO ByteString
-swapBlockInv blk = B.create 16 copy
-	where copy ptr = mapM_ (\i -> M.unsafeRead blk (swapIndex i) >>= pokeByteOff ptr i) [0..15]
+swapBlockInv :: AESState -> Ptr Word8 -> IO ()
+swapBlockInv blk ptr = mapM_ (\i -> M.unsafeRead blk (swapIndex i) >>= pokeByteOff ptr i) [0..15]
 
 mSbox :: Word8 -> Word8
 mSbox = V.unsafeIndex sbox . fromIntegral
