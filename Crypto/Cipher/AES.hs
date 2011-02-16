@@ -117,17 +117,17 @@ getNbr (Key v)
 	| otherwise         = 14
 
 initKey128 :: ByteString -> Either String Key
-initKey128 = initKey 16 10
+initKey128 = initKey 16
 
 initKey192 :: ByteString -> Either String Key
-initKey192 = initKey 24 12
+initKey192 = initKey 24
 
 initKey256 :: ByteString -> Either String Key
-initKey256 = initKey 32 14
+initKey256 = initKey 32
 
-initKey :: Int -> Int -> ByteString -> Either String Key
-initKey sz nbr b
-	| B.length b == sz = Right $ coreExpandKey nbr (V.generate sz $ B.unsafeIndex b)
+initKey :: Int -> ByteString -> Either String Key
+initKey sz b
+	| B.length b == sz = Right $ coreExpandKey (V.generate sz $ B.unsafeIndex b)
 	| otherwise        = Left "wrong key size"
 
 aesMain :: Int -> Key -> AESState -> AESState
@@ -148,23 +148,48 @@ swapIndexes = V.fromList [ 0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15 
 swapIndex :: Int -> Int
 swapIndex i = V.unsafeIndex swapIndexes i
 
-coreExpandKey :: Int -> Vector Word8 -> Key
-coreExpandKey nbr vkey = Key (V.concat (ek0 : ekN))
+coreExpandKey :: Vector Word8 -> Key
+coreExpandKey vkey
+	| V.length vkey == 16 = Key (V.concat (ek0 : ekN16))
+	| V.length vkey == 24 = Key (V.concat (ek0 : ekN24))
+	| V.length vkey == 32 = Key (V.concat (ek0 : ekN16)) -- FIXME
+	| otherwise           = Key (V.empty)
 	where
 		ek0 = vkey
-		ekN = reverse $ snd $ foldl generateFold (ek0, []) [1..nbr]
+		ekN16 = reverse $ snd $ foldl (generateFold generate16) (ek0, []) [1..10]
 
-		generateFold (prevk, accK) it = let nk = generate prevk it in (nk, nk : accK)
-		generate prevk it =
-			let v0 = cR0 it (V.unsafeIndex prevk 12)
-			                (V.unsafeIndex prevk 13)
-			                (V.unsafeIndex prevk 14)
-			                (V.unsafeIndex prevk 15) in
-			let (e0,e1,e2,e3) = xorVector prevk 0 v0 in
-			let (e4,e5,e6,e7) = xorVector prevk 4 (e0,e1,e2,e3) in
-			let (e8,e9,e10,e11) = xorVector prevk 8 (e4,e5,e6,e7) in
-			let (e12,e13,e14,e15) = xorVector prevk 12 (e8,e9,e10,e11) in
+		ekN24 =
+			let (lk, acc) = foldl (generateFold generate24) (ek0, []) [1..7] in
+			let nk = generate16 lk 8 in
+			reverse (nk : acc)
+
+		generateFold gen (prevk, accK) it = let nk = gen prevk it in (nk, nk : accK)
+
+		generate16 prevk it =
+			let len = V.length prevk in
+			let v0 = cR0 it (V.unsafeIndex prevk $ len - 4)
+			                (V.unsafeIndex prevk $ len - 3)
+			                (V.unsafeIndex prevk $ len - 2)
+			                (V.unsafeIndex prevk $ len - 1) in
+			let eg0@(e0,e1,e2,e3)     = xorVector prevk 0 v0   in
+			let eg1@(e4,e5,e6,e7)     = xorVector prevk 4 eg0  in
+			let eg2@(e8,e9,e10,e11)   = xorVector prevk 8 eg1  in
+			let     (e12,e13,e14,e15) = xorVector prevk 12 eg2 in
 			V.fromList [e0,e1,e2,e3,e4,e5,e6,e7,e8,e9,e10,e11,e12,e13,e14,e15]
+
+		generate24 prevk it =
+			let len = V.length prevk in
+			let v0 = cR0 it (V.unsafeIndex prevk $ len - 4)
+			                (V.unsafeIndex prevk $ len - 3)
+			                (V.unsafeIndex prevk $ len - 2)
+			                (V.unsafeIndex prevk $ len - 1) in
+			let eg0@(e0,e1,e2,e3)     = xorVector prevk 0 v0   in
+			let eg1@(e4,e5,e6,e7)     = xorVector prevk 4 eg0  in
+			let eg2@(e8,e9,e10,e11)   = xorVector prevk 8 eg1  in
+			let eg3@(e12,e13,e14,e15) = xorVector prevk 12 eg2 in
+			let eg4@(e16,e17,e18,e19) = xorVector prevk 16 eg3 in
+			let     (e20,e21,e22,e23) = xorVector prevk 20 eg4 in
+			V.fromList [e0,e1,e2,e3,e4,e5,e6,e7,e8,e9,e10,e11,e12,e13,e14,e15,e16,e17,e18,e19,e20,e21,e22,e23]
 
 		xorVector k i (t0,t1,t2,t3) =
 			( V.unsafeIndex k (i+0) `xor` t0
