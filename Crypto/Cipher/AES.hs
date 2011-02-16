@@ -93,13 +93,13 @@ data Key = Key (Vector Word8)
 
 type AESState = Vector Word8
 
-{- | encrypt with the key a bytestring and returns the encrypted bytestring -}
+{- | encrypt using simple EBC mode -}
 encrypt :: Key -> B.ByteString -> B.ByteString
 encrypt key b
 	| B.length b `mod` 16 == 0 = B.concat $ doChunks (coreEncrypt key) b
 	| otherwise                = error "invalid data length"
 
-{- | decrypt with the key a bytestring and returns the encrypted bytestring -}
+{- | decrypt using simple EBC mode -}
 decrypt :: Key -> B.ByteString -> B.ByteString
 decrypt key b
 	| B.length b `mod` 16 == 0 = B.concat $ doChunks (coreDecrypt key) b
