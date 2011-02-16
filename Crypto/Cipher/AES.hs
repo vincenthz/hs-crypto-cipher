@@ -152,7 +152,7 @@ coreExpandKey :: Vector Word8 -> Key
 coreExpandKey vkey
 	| V.length vkey == 16 = Key (V.concat (ek0 : ekN16))
 	| V.length vkey == 24 = Key (V.concat (ek0 : ekN24))
-	| V.length vkey == 32 = Key (V.concat (ek0 : ekN32)) -- FIXME
+	| V.length vkey == 32 = Key (V.concat (ek0 : ekN32))
 	| otherwise           = Key (V.empty)
 	where
 		ek0 = vkey
