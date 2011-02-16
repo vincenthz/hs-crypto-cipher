@@ -10,6 +10,9 @@ module Crypto.Cipher.AES
 	-- * Basic encryption and decryption
 	, encrypt
 	, decrypt
+	-- * CBC encryption and decryption
+	, encryptCBC
+	, decryptCBC
 	-- * key building mechanism
 	, initKey128
 	, initKey192
@@ -91,13 +94,41 @@ instance Serialize AES256 where
 data Key = Key (Vector Word8)
 	deriving (Show,Eq)
 
+type IV = B.ByteString
+
 type AESState = Vector Word8
+
+{- | encrypt using CBC mode
+ - IV need to be 16 bytes and the data to encrypt a multiple of 16 bytes -}
+encryptCBC :: Key -> IV -> B.ByteString -> B.ByteString
+encryptCBC key iv b
+	| B.length iv /= 16        = error "invalid IV length"
+	| B.length b `mod` 16 /= 0 = error "invalid data length"
+	| otherwise                = B.concat $ encryptIter iv (makeChunks b)
+		where
+			encryptIter _   []     = []
+			encryptIter iv' (x:xs) =
+				let r = coreEncrypt key $ B.pack $ B.zipWith xor iv' x in
+				r : encryptIter r xs
 
 {- | encrypt using simple EBC mode -}
 encrypt :: Key -> B.ByteString -> B.ByteString
 encrypt key b
 	| B.length b `mod` 16 == 0 = B.concat $ doChunks (coreEncrypt key) b
 	| otherwise                = error "invalid data length"
+
+{- | decrypt using CBC mode
+ - IV need to be 16 bytes and the data to decrypt a multiple of 16 bytes -}
+decryptCBC :: Key -> IV -> B.ByteString -> B.ByteString
+decryptCBC key iv b
+	| B.length iv /= 16        = error "invalid IV length"
+	| B.length b `mod` 16 /= 0 = error "invalid data length"
+	| otherwise                = B.concat $ decryptIter iv (makeChunks b)
+		where
+			decryptIter _   []     = []
+			decryptIter iv' (x:xs) =
+				let r = B.pack $ B.zipWith xor iv' $ coreDecrypt key x in
+				r : decryptIter x xs
 
 {- | decrypt using simple EBC mode -}
 decrypt :: Key -> B.ByteString -> B.ByteString
@@ -111,6 +142,9 @@ doChunks f b =
 	if B.length rest >= 16
 		then f x : doChunks f rest
 		else [ f x ]
+
+makeChunks :: B.ByteString -> [B.ByteString]
+makeChunks = doChunks id
 
 coreEncrypt :: Key -> ByteString -> ByteString
 coreEncrypt key input = swapBlockInv $ aesMain (getNbr key) key $ swapBlock input
