@@ -152,7 +152,7 @@ coreExpandKey :: Vector Word8 -> Key
 coreExpandKey vkey
 	| V.length vkey == 16 = Key (V.concat (ek0 : ekN16))
 	| V.length vkey == 24 = Key (V.concat (ek0 : ekN24))
-	| V.length vkey == 32 = Key (V.concat (ek0 : ekN16)) -- FIXME
+	| V.length vkey == 32 = Key (V.concat (ek0 : ekN32)) -- FIXME
 	| otherwise           = Key (V.empty)
 	where
 		ek0 = vkey
@@ -161,6 +161,11 @@ coreExpandKey vkey
 		ekN24 =
 			let (lk, acc) = foldl (generateFold generate24) (ek0, []) [1..7] in
 			let nk = generate16 lk 8 in
+			reverse (nk : acc)
+
+		ekN32 =
+			let (lk, acc) = foldl (generateFold generate32) (ek0, []) [1..6] in
+			let nk = generate16 lk 7 in
 			reverse (nk : acc)
 
 		generateFold gen (prevk, accK) it = let nk = gen prevk it in (nk, nk : accK)
@@ -191,11 +196,35 @@ coreExpandKey vkey
 			let     (e20,e21,e22,e23) = xorVector prevk 20 eg4 in
 			V.fromList [e0,e1,e2,e3,e4,e5,e6,e7,e8,e9,e10,e11,e12,e13,e14,e15,e16,e17,e18,e19,e20,e21,e22,e23]
 
+		generate32 prevk it =
+			let len = V.length prevk in
+			let v0 = cR0 it (V.unsafeIndex prevk $ len - 4)
+			                (V.unsafeIndex prevk $ len - 3)
+			                (V.unsafeIndex prevk $ len - 2)
+			                (V.unsafeIndex prevk $ len - 1) in
+			let eg0@(e0,e1,e2,e3)     = xorVector prevk 0 v0   in
+			let eg1@(e4,e5,e6,e7)     = xorVector prevk 4 eg0  in
+			let eg2@(e8,e9,e10,e11)   = xorVector prevk 8 eg1  in
+			let eg3@(e12,e13,e14,e15) = xorVector prevk 12 eg2 in
+			let eg4@(e16,e17,e18,e19) = xorSboxVector prevk 16 eg3 in
+			let eg5@(e20,e21,e22,e23) = xorVector prevk 20 eg4 in
+			let eg6@(e24,e25,e26,e27) = xorVector prevk 24 eg5 in
+			let     (e28,e29,e30,e31) = xorVector prevk 28 eg6 in
+			V.fromList [e0,e1,e2,e3,e4,e5,e6,e7,e8,e9,e10,e11,e12,e13,e14,e15,e16
+			           ,e17,e18,e19,e20,e21,e22,e23,e24,e25,e26,e27,e28,e29,e30,e31]
+
 		xorVector k i (t0,t1,t2,t3) =
 			( V.unsafeIndex k (i+0) `xor` t0
 			, V.unsafeIndex k (i+1) `xor` t1
 			, V.unsafeIndex k (i+2) `xor` t2
 			, V.unsafeIndex k (i+3) `xor` t3
+			)
+
+		xorSboxVector k i (t0,t1,t2,t3) =
+			( V.unsafeIndex k (i+0) `xor` mSbox t0
+			, V.unsafeIndex k (i+1) `xor` mSbox t1
+			, V.unsafeIndex k (i+2) `xor` mSbox t2
+			, V.unsafeIndex k (i+3) `xor` mSbox t3
 			)
 
 		cR0 it r0 r1 r2 r3 =
