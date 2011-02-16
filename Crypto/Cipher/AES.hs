@@ -25,48 +25,39 @@ import Data.Tagged (Tagged(..))
 import Crypto.Classes (BlockCipher(..))
 import Data.Serialize (Serialize(..), getByteString, putByteString)
 
-data AES128 = A128
-	{ key128    :: {-# UNPACK #-} !Key
-	, rawKey128 :: {-# UNPACK #-} !B.ByteString }
-	deriving (Eq, Show)
-data AES192 = A192
-	{ key192    :: {-# UNPACK #-} !Key
-	, rawKey192 :: {-# UNPACK #-} !B.ByteString }
-	deriving (Eq, Show)
-data AES256 = A256
-	{ key256    :: {-# UNPACK #-} !Key
-	, rawKey256 :: {-# UNPACK #-} !B.ByteString }
-	deriving (Eq, Show)
+newtype AES128 = A128 { unA128 :: Key }
+newtype AES192 = A192 { unA192 :: Key }
+newtype AES256 = A256 { unA256 :: Key }
 
 instance BlockCipher AES128 where
 	blockSize    = Tagged 128
-	encryptBlock = encrypt . key128
-	decryptBlock = decrypt . key128
-	buildKey b = case initKey128 b of
-		Left _  -> Nothing
-		Right k -> Just (A128 k b)
-	keyLength = Tagged 128
+	encryptBlock = encrypt . unA128
+	decryptBlock = decrypt . unA128
+	buildKey b   = either (const Nothing) (Just . A128) $ initKey128 b
+	keyLength    = Tagged 128
 
 instance BlockCipher AES192 where
 	blockSize    = Tagged 128
-	encryptBlock = encrypt . key192
-	decryptBlock = decrypt . key192
-	buildKey b = case initKey192 b of
-		Left _  -> Nothing
-		Right k -> Just (A192 k b)
-	keyLength = Tagged 192
+	encryptBlock = encrypt . unA192
+	decryptBlock = decrypt . unA192
+	buildKey b   = either (const Nothing) (Just . A192) $ initKey192 b
+	keyLength    = Tagged 192
 
 instance BlockCipher AES256 where
 	blockSize    = Tagged 128
-	encryptBlock = encrypt . key256
-	decryptBlock = decrypt . key256
-	buildKey b = case initKey256 b of
-			Left _  -> Nothing
-			Right k -> Just (A256 k b)
-	keyLength = Tagged 256
+	encryptBlock = encrypt . unA256
+	decryptBlock = decrypt . unA256
+	buildKey b   = either (const Nothing) (Just . A256) $ initKey256 b
+	keyLength    = Tagged 256
+
+serializeKey :: Key -> ByteString
+serializeKey (Key v)
+	| V.length v == 176 = B.pack $ map (V.unsafeIndex v) [0..15]
+	| V.length v == 208 = B.pack $ map (V.unsafeIndex v) [0..23]
+	| otherwise         = B.pack $ map (V.unsafeIndex v) [0..31]
 
 instance Serialize AES128 where
-	put = putByteString . rawKey128
+	put = putByteString . serializeKey . unA128
 	get = do
 		raw <- getByteString (128 `div` 8)
 		case buildKey raw of
@@ -74,7 +65,7 @@ instance Serialize AES128 where
 			Just k  -> return k
 
 instance Serialize AES192 where
-	put = putByteString . rawKey192
+	put = putByteString . serializeKey . unA192
 	get = do
 		raw <- getByteString (192 `div` 8)
 		case buildKey raw of
@@ -82,7 +73,7 @@ instance Serialize AES192 where
 			Just k  -> return k
 
 instance Serialize AES256 where
-	put = putByteString . rawKey256
+	put = putByteString . serializeKey . unA256
 	get = do
 		raw <- getByteString (256 `div` 8)
 		case buildKey raw of
