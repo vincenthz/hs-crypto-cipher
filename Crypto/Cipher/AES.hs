@@ -105,10 +105,16 @@ doChunks f b =
 		else [ f x ]
 
 coreEncrypt :: Key -> ByteString -> ByteString
-coreEncrypt key input = swapBlockInv $ aesMain 10 key $ swapBlock input
+coreEncrypt key input = swapBlockInv $ aesMain (getNbr key) key $ swapBlock input
 
 coreDecrypt :: Key -> ByteString -> ByteString
-coreDecrypt key input = swapBlockInv $ aesMainInv 10 key $ swapBlock input
+coreDecrypt key input = swapBlockInv $ aesMainInv (getNbr key) key $ swapBlock input
+
+getNbr :: Key -> Int
+getNbr (Key v)
+	| V.length v == 176 = 10
+	| V.length v == 208 = 12
+	| otherwise         = 14
 
 initKey128 :: ByteString -> Either String Key
 initKey128 = initKey 16 10
