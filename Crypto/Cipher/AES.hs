@@ -6,6 +6,10 @@ module Crypto.Cipher.AES
 	-- * those key sizes are not actually working right now.
 	, initKey192
 	, initKey256
+	-- * Wrappers for "crypto-api" instances
+	, AES128
+	, AES192
+	, AES256
 	) where
 
 import Data.Word
@@ -17,7 +21,75 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Unsafe as B
 
-newtype Key = Key (Vector Word8)
+import Data.Tagged (Tagged(..))
+import Crypto.Classes (BlockCipher(..))
+import Data.Serialize (Serialize(..), getByteString, putByteString)
+
+data AES128 = A128
+	{ key128    :: {-# UNPACK #-} !Key
+	, rawKey128 :: {-# UNPACK #-} !B.ByteString }
+	deriving (Eq, Show)
+data AES192 = A192
+	{ key192    :: {-# UNPACK #-} !Key
+	, rawKey192 :: {-# UNPACK #-} !B.ByteString }
+	deriving (Eq, Show)
+data AES256 = A256
+	{ key256    :: {-# UNPACK #-} !Key
+	, rawKey256 :: {-# UNPACK #-} !B.ByteString }
+	deriving (Eq, Show)
+
+instance BlockCipher AES128 where
+	blockSize    = Tagged 128
+	encryptBlock = encrypt . key128
+	decryptBlock = decrypt . key128
+	buildKey b = case initKey128 b of
+		Left _  -> Nothing
+		Right k -> Just (A128 k b)
+	keyLength = Tagged 128
+
+instance BlockCipher AES192 where
+	blockSize    = Tagged 128
+	encryptBlock = encrypt . key192
+	decryptBlock = decrypt . key192
+	buildKey b = case initKey192 b of
+		Left _  -> Nothing
+		Right k -> Just (A192 k b)
+	keyLength = Tagged 192
+
+instance BlockCipher AES256 where
+	blockSize    = Tagged 128
+	encryptBlock = encrypt . key256
+	decryptBlock = decrypt . key256
+	buildKey b = case initKey256 b of
+			Left _  -> Nothing
+			Right k -> Just (A256 k b)
+	keyLength = Tagged 256
+
+instance Serialize AES128 where
+	put = putByteString . rawKey128
+	get = do
+		raw <- getByteString (128 `div` 8)
+		case buildKey raw of
+			Nothing -> fail "Invalid raw key material."
+			Just k  -> return k
+
+instance Serialize AES192 where
+	put = putByteString . rawKey192
+	get = do
+		raw <- getByteString (192 `div` 8)
+		case buildKey raw of
+			Nothing -> fail "Invalid raw key material."
+			Just k  -> return k
+
+instance Serialize AES256 where
+	put = putByteString . rawKey256
+	get = do
+		raw <- getByteString (256 `div` 8)
+		case buildKey raw of
+			Nothing -> fail "Invalid raw key material."
+			Just k  -> return k
+
+data Key = Key (Vector Word8)
 	deriving (Show,Eq)
 
 type AESState = Vector Word8
