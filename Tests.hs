@@ -287,19 +287,27 @@ prop_dsa_valid (RSAMessage msg) =
 {-----------------------------------------------------------------------------------------------}
 {- testing AES -}
 {-----------------------------------------------------------------------------------------------}
-data AES128Message = AES128Message B.ByteString B.ByteString deriving (Show, Eq)
+data AES128Message = AES128Message B.ByteString B.ByteString B.ByteString deriving (Show, Eq)
 
 instance Arbitrary AES128Message where
 	arbitrary = do
 		sz <- choose (1, 12)
 		ws <- replicateM (sz*16) (choose (0,255) :: Gen Int)
 		key <- replicateM 16 (choose (0,255) :: Gen Int)
-		return $ AES128Message (B.pack $ map fromIntegral key) (B.pack $ map fromIntegral ws)
+		iv  <- replicateM 16 (choose (0,255) :: Gen Int)
+		return $ AES128Message (B.pack $ map fromIntegral key)
+		                       (B.pack $ map fromIntegral iv)
+		                       (B.pack $ map fromIntegral ws)
 
-prop_aes128_valid (AES128Message key msg) =
+prop_aes128_ecb_valid (AES128Message key _ msg) =
 	let (Right k) = AES.initKey128 key in
 	let emsg = AES.encrypt k msg in
 	AES.decrypt k emsg == msg
+
+prop_aes128_cbc_valid (AES128Message key iv msg) =
+	let (Right k) = AES.initKey128 key in
+	let emsg = AES.encryptCBC k iv msg in
+	AES.decryptCBC k iv emsg == msg
 
 {-----------------------------------------------------------------------------------------------}
 {- main -}
@@ -329,4 +337,5 @@ main = do
 
 	run_test "DSA verify . sign = true" prop_dsa_valid
 
-	run_test "AES128 decrypt.encrypt = id" prop_aes128_valid
+	run_test "AES128 (ECB) decrypt.encrypt = id" prop_aes128_ecb_valid
+	run_test "AES128 (CBC) decrypt.encrypt = id" prop_aes128_cbc_valid
