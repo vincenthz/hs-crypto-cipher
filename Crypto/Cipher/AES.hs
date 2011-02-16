@@ -7,10 +7,11 @@
 
 module Crypto.Cipher.AES
 	( Key
+	-- * Basic encryption and decryption
 	, encrypt
 	, decrypt
+	-- * key building mechanism
 	, initKey128
-	-- * those key sizes are not actually working right now.
 	, initKey192
 	, initKey256
 	-- * Wrappers for "crypto-api" instances
@@ -96,13 +97,13 @@ type AESState = Vector Word8
 encrypt :: Key -> B.ByteString -> B.ByteString
 encrypt key b
 	| B.length b `mod` 16 == 0 = B.concat $ doChunks (coreEncrypt key) b
-	| otherwise                = error "wrong length"
+	| otherwise                = error "invalid data length"
 
 {- | decrypt with the key a bytestring and returns the encrypted bytestring -}
 decrypt :: Key -> B.ByteString -> B.ByteString
 decrypt key b
 	| B.length b `mod` 16 == 0 = B.concat $ doChunks (coreDecrypt key) b
-	| otherwise                = error "wrong length"
+	| otherwise                = error "invalid data length"
 
 doChunks :: (B.ByteString -> B.ByteString) -> B.ByteString -> [B.ByteString]
 doChunks f b =
