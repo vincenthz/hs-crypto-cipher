@@ -187,6 +187,7 @@ aesMainInv nbr key block =
 {- 0 -> 0, 1 -> 4, ... -}
 swapIndexes :: Vector Int
 swapIndexes = V.fromList [ 0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15 ]
+{-# INLINE swapIndex #-}
 swapIndex :: Int -> Int
 swapIndex i = V.unsafeIndex swapIndexes i
 
@@ -272,6 +273,7 @@ coreExpandKey vkey
 		cR0 it r0 r1 r2 r3 =
 			(mSbox r1 `xor` mRcon it, mSbox r2, mSbox r3, mSbox r0)
 
+{-# INLINE shiftRows #-}
 shiftRows :: AESState -> AESState
 shiftRows ost =
 	let st = V.map mSbox ost in
@@ -280,12 +282,14 @@ shiftRows ost =
 	      , (13, V.unsafeIndex st 12), (14, V.unsafeIndex st 13), (15, V.unsafeIndex st 14), (12, V.unsafeIndex st 15)
 	      ]
 
+{-# INLINE addRoundKey #-}
 addRoundKey :: Key -> Int -> AESState -> AESState
 addRoundKey (Key key) i = V.zipWith (\v1 v2 -> v1 `xor` v2) rk
 	where
 		rk = V.generate 16 (\n -> V.unsafeIndex key (16 * i + swapIndex n))
 
 
+{-# INLINE mixColumns #-}
 mixColumns :: AESState -> AESState
 mixColumns state =
 	let (state0, state4, state8, state12)  = pr 0 in
@@ -299,6 +303,7 @@ mixColumns state =
 		, (12,state12), (13,state13), (14,state14), (15,state15)
 		]
 	where
+		{-# INLINE pr #-}
 		pr i =
 			let cpy0 = V.unsafeIndex state (0 * 4 + i) in
 			let cpy1 = V.unsafeIndex state (1 * 4 + i) in
@@ -309,10 +314,14 @@ mixColumns state =
 			,gm2 cpy1 `xor` gm1 cpy0 `xor` gm1 cpy3 `xor` gm3 cpy2
 			,gm2 cpy2 `xor` gm1 cpy1 `xor` gm1 cpy0 `xor` gm3 cpy3
 			,gm2 cpy3 `xor` gm1 cpy2 `xor` gm1 cpy1 `xor` gm3 cpy0)
+		{-# INLINE gm1 #-}
 		gm1 a = a
+		{-# INLINE gm2 #-}
 		gm2 a = V.unsafeIndex gmtab2 $ fromIntegral a
+		{-# INLINE gm3 #-}
 		gm3 a = V.unsafeIndex gmtab3 $ fromIntegral a
 
+{-# INLINE shiftRowsInv #-}
 shiftRowsInv :: AESState -> AESState
 shiftRowsInv st =
 	let nst = st //
@@ -322,6 +331,7 @@ shiftRowsInv st =
 		] in
 	V.map mRsbox nst
 
+{-# INLINE mixColumnsInv #-}
 mixColumnsInv :: AESState -> AESState
 mixColumnsInv state =
 	let (state0, state4, state8, state12)  = pr 0 in
@@ -335,6 +345,7 @@ mixColumnsInv state =
 		, (12,state12), (13,state13), (14,state14), (15,state15)
 		]
 	where
+		{-# INLINE pr #-}
 		pr i = 
 			let cpy0 = V.unsafeIndex state (0 * 4 + i) in
 			let cpy1 = V.unsafeIndex state (1 * 4 + i) in
@@ -345,23 +356,32 @@ mixColumnsInv state =
 			,gm14 cpy1 `xor` gm9 cpy0 `xor` gm13 cpy3 `xor` gm11 cpy2
 			,gm14 cpy2 `xor` gm9 cpy1 `xor` gm13 cpy0 `xor` gm11 cpy3
 			,gm14 cpy3 `xor` gm9 cpy2 `xor` gm13 cpy1 `xor` gm11 cpy0)
+		{-# INLINE gm14 #-}
+		{-# INLINE gm13 #-}
+		{-# INLINE gm11 #-}
+		{-# INLINE gm9 #-}
 		gm14 a = V.unsafeIndex gmtab14 $ fromIntegral a
 		gm13 a = V.unsafeIndex gmtab13 $ fromIntegral a
 		gm11 a = V.unsafeIndex gmtab11 $ fromIntegral a
 		gm9 a  = V.unsafeIndex gmtab9 $ fromIntegral a
 
+{-# INLINE swapBlock #-}
 swapBlock :: ByteString -> AESState
 swapBlock b = V.generate 16 (\i -> B.unsafeIndex b $ swapIndex i)
 
+{-# INLINE swapBlockInv #-}
 swapBlockInv :: AESState -> ByteString
 swapBlockInv v = B.pack $ map (V.unsafeIndex v . swapIndex) [0..15]
 
+{-# INLINE mSbox #-}
 mSbox :: Word8 -> Word8
 mSbox = V.unsafeIndex sbox . fromIntegral
 
+{-# INLINE mRsbox #-}
 mRsbox :: Word8 -> Word8
 mRsbox = V.unsafeIndex rsbox . fromIntegral
 
+{-# INLINE mRcon #-}
 mRcon :: Int -> Word8
 mRcon i = V.unsafeIndex rcon (i `mod` len)
 	where len = V.length rcon
