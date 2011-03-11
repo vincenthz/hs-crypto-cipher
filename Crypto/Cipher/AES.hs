@@ -7,6 +7,7 @@
 
 module Crypto.Cipher.AES
 	( Key
+	, IV
 	-- * Basic encryption and decryption
 	, encrypt
 	, decrypt
