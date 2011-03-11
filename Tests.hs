@@ -215,6 +215,7 @@ instance CryptoRandomGen Rng where
 	newGen _       = Right (Rng (2,3))
 	genSeedLength  = 0
 	genBytes len g = Right $ first B.pack $ getBytes len g
+	reseed         = undefined
 
 rng = Rng (1,2) 
 
