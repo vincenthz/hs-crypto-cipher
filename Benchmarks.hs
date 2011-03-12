@@ -14,6 +14,7 @@ import qualified Data.ByteString.Lazy as L
 
 import qualified Crypto.Cipher.AES as AES
 import qualified Crypto.Cipher.RC4 as RC4
+import qualified Crypto.Cipher.Camellia as Camellia
 
 (Right key128) = AES.initKey128 $ B.replicate 16 0
 aesEncrypt128 = AES.encrypt key128
@@ -21,6 +22,9 @@ aesEncrypt128 = AES.encrypt key128
 aesEncrypt192 = AES.encrypt key192
 (Right key256) = AES.initKey256 $ B.replicate 32 0
 aesEncrypt256 = AES.encrypt key256
+
+(Right camelliaKey128) = Camellia.initKey $ B.replicate 16 0
+camelliaEncrypt128 = Camellia.encrypt camelliaKey128
 
 rc4Key = RC4.initCtx $ replicate 16 0
 rc4Encrypt = snd . RC4.encrypt rc4Key 
@@ -52,7 +56,7 @@ pn n time = printf "%.1f K/s" (norm n time)
 
 doOne env (cipherName, f) = do
 	(mean16, mean32, mean128, mean512, mean1024, mean4096) <- doCipher env f
-	let s = printf "%8s: %12s %12s %12s %12s %12s %12s\n          %12s %12s %12s %12s %12s %12s"
+	let s = printf "%12s: %12s %12s %12s %12s %12s %12s\n                %12s %12s %12s %12s %12s %12s"
 	               cipherName
 	               (secs mean16) (secs mean32) (secs mean128)
 	               (secs mean512) (secs mean1024) (secs mean4096)
@@ -63,12 +67,13 @@ doOne env (cipherName, f) = do
 main = withConfig defaultConfig $ do
 	env <- measureEnvironment
 	l   <- mapM (doOne env)
-		[ ("RC4"   , rc4Encrypt)
-		, ("AES128", aesEncrypt128)
-		, ("AES192", aesEncrypt192)
-		, ("AES256", aesEncrypt256)
+		[ ("RC4"        , rc4Encrypt)
+		, ("Camellia128", camelliaEncrypt128)
+		, ("AES128"     , aesEncrypt128)
+		, ("AES192"     , aesEncrypt192)
+		, ("AES256"     , aesEncrypt256)
 		]
-	liftIO $ printf "%8s| %12s %12s %12s %12s %12s %12s\n"
+	liftIO $ printf "%12s| %12s %12s %12s %12s %12s %12s\n"
 	                "cipher" "16 bytes" "32 bytes" "64 bytes" "512 bytes" "1024 bytes" "4096 bytes"
-	liftIO $ printf "========================================================================================\n"
+	liftIO $ printf "=============================================================================================\n"
 	mapM_ (liftIO . putStrLn) l
