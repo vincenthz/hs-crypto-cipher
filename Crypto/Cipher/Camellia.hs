@@ -8,17 +8,18 @@
 -- this only cover Camellia 128 bits for now, API will change once
 -- 192 and 256 mode are implemented too
 
-module Crypto.Cipher.Camellia (
-	Key(..),
-	initKey,
-	encrypt,
-	decrypt
+module Crypto.Cipher.Camellia
+	( Key(..)
+	, initKey
+	, encrypt
+	, decrypt
 	) where
 
 import Data.Word
 import Data.Vector.Unboxed
 import Data.Bits
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Unsafe as B
 
 data Mode = Decrypt | Encrypt
 
@@ -43,10 +44,18 @@ w64tow8 x = (t1, t2, t3, t4, t5, t6, t7, t8)
 		t7 = fromIntegral (x `shiftR` 8)
 		t8 = fromIntegral (x)
 
-w8tow64 :: (Word8, Word8, Word8, Word8, Word8, Word8, Word8, Word8) -> Word64
-w8tow64 (t1, t2, t3, t4, t5, t6, t7, t8) =
-	(sh t1 56 .|. sh t2 48 .|. sh t3 40 .|. sh t4 32 .|. sh t5 24 .|. sh t6 16 .|. sh t7 8 .|. sh t8 0)
-	where sh i r = (fromIntegral i) `shiftL` r
+w8tow64 :: B.ByteString -> Word64
+w8tow64 b = (sh t1 56 .|. sh t2 48 .|. sh t3 40 .|. sh t4 32 .|. sh t5 24 .|. sh t6 16 .|. sh t7 8 .|. sh t8 0)
+	where
+		t1     = B.unsafeIndex b 0
+		t2     = B.unsafeIndex b 1
+		t3     = B.unsafeIndex b 2
+		t4     = B.unsafeIndex b 3
+		t5     = B.unsafeIndex b 4
+		t6     = B.unsafeIndex b 5
+		t7     = B.unsafeIndex b 6
+		t8     = B.unsafeIndex b 7
+		sh i r = (fromIntegral i) `shiftL` r
 
 w64tow32 :: Word64 -> (Word32, Word32)
 w64tow32 w = (fromIntegral (w `shiftR` 32), fromIntegral (w .&. 0xffffffff))
@@ -140,9 +149,9 @@ data Key = Key
 	, ke :: Vector Word64 }
 	deriving (Show)
 
-setKeyInterim :: [Word8] -> (Word128, Word128, Word128, Word128)
-setKeyInterim [a0,a1,a2,a3,a4,a5,a6,a7,b0,b1,b2,b3,b4,b5,b6,b7] =
-	let kL = (w8tow64 (a0,a1,a2,a3,a4,a5,a6,a7), w8tow64 (b0,b1,b2,b3,b4,b5,b6,b7)) in
+setKeyInterim :: B.ByteString -> (Word128, Word128, Word128, Word128)
+setKeyInterim keyseed =
+	let kL = (w8tow64 $ B.take 8 keyseed, w8tow64 $ B.drop 8 keyseed) in
 	let kR = (0, 0) in
 
 	let kA =
@@ -168,33 +177,33 @@ setKeyInterim [a0,a1,a2,a3,a4,a5,a6,a7,b0,b1,b2,b3,b4,b5,b6,b7] =
 		in
 	(w64tow128 kL, w64tow128 kR, w64tow128 kA, w64tow128 kB)
 
-setKeyInterim _ = error "wrong size key"
+initKey :: B.ByteString -> Either String Key
+initKey keyseed
+	| B.length keyseed /= 16 = Left "wrong key size"
+	| otherwise              =
+		let (kL, _, kA, _) = setKeyInterim keyseed in
 
-initKey :: [Word8] -> Either String Key
-initKey l =
-	let (kL, _, kA, _) = setKeyInterim l in
+		let (kw1, kw2) = w128tow64 (kL `rotl128` 0) in
+		let (k1, k2)   = w128tow64 (kA `rotl128` 0) in
+		let (k3, k4)   = w128tow64 (kL `rotl128` 15) in
+		let (k5, k6)   = w128tow64 (kA `rotl128` 15) in
+		let (ke1, ke2) = w128tow64 (kA `rotl128` 30) in --ke1 = (KA <<<  30) >> 64; ke2 = (KA <<<  30) & MASK64;
+		let (k7, k8)   = w128tow64 (kL `rotl128` 45) in --k7  = (KL <<<  45) >> 64; k8  = (KL <<<  45) & MASK64;
+		let (k9, _)    = w128tow64 (kA `rotl128` 45) in --k9  = (KA <<<  45) >> 64;
+		let (_, k10)   = w128tow64 (kL `rotl128` 60) in
+		let (k11, k12) = w128tow64 (kA `rotl128` 60) in
+		let (ke3, ke4) = w128tow64 (kL `rotl128` 77) in
+		let (k13, k14) = w128tow64 (kL `rotl128` 94) in
+		let (k15, k16) = w128tow64 (kA `rotl128` 94) in
+		let (k17, k18) = w128tow64 (kL `rotl128` 111) in
+		let (kw3, kw4) = w128tow64 (kA `rotl128` 111) in
 
-	let (kw1, kw2) = w128tow64 (kL `rotl128` 0) in
-	let (k1, k2)   = w128tow64 (kA `rotl128` 0) in
-	let (k3, k4)   = w128tow64 (kL `rotl128` 15) in
-	let (k5, k6)   = w128tow64 (kA `rotl128` 15) in
-	let (ke1, ke2) = w128tow64 (kA `rotl128` 30) in --ke1 = (KA <<<  30) >> 64; ke2 = (KA <<<  30) & MASK64;
-	let (k7, k8)   = w128tow64 (kL `rotl128` 45) in --k7  = (KL <<<  45) >> 64; k8  = (KL <<<  45) & MASK64;
-	let (k9, _)    = w128tow64 (kA `rotl128` 45) in --k9  = (KA <<<  45) >> 64;
-	let (_, k10)   = w128tow64 (kL `rotl128` 60) in
-	let (k11, k12) = w128tow64 (kA `rotl128` 60) in
-	let (ke3, ke4) = w128tow64 (kL `rotl128` 77) in
-	let (k13, k14) = w128tow64 (kL `rotl128` 94) in
-	let (k15, k16) = w128tow64 (kA `rotl128` 94) in
-	let (k17, k18) = w128tow64 (kL `rotl128` 111) in
-	let (kw3, kw4) = w128tow64 (kA `rotl128` 111) in
-
-	Right $ Key
-		{ kw = fromList [ kw1, kw2, kw3, kw4 ]
-		, ke = fromList [ ke1, ke2, ke3, ke4 ]
-		, k  = fromList [ k1, k2, k3, k4, k5, k6, k7, k8, k9,
-		                  k10, k11, k12, k13, k14, k15, k16, k17, k18 ]
-		}
+		Right $ Key
+			{ kw = fromList [ kw1, kw2, kw3, kw4 ]
+			, ke = fromList [ ke1, ke2, ke3, ke4 ]
+			, k  = fromList [ k1, k2, k3, k4, k5, k6, k7, k8, k9,
+					  k10, k11, k12, k13, k14, k15, k16, k17, k18 ]
+			}
 
 feistel :: Word64 -> Word64 -> Word64
 feistel fin sk = 
@@ -216,7 +225,7 @@ feistel fin sk =
 	let y6 = t2' `xor` t3' `xor` t5' `xor` t7' `xor` t8' in
 	let y7 = t3' `xor` t4' `xor` t5' `xor` t6' `xor` t8' in
 	let y8 = t1' `xor` t4' `xor` t5' `xor` t6' `xor` t7' in
-	w8tow64 (y1, y2, y3, y4, y5, y6, y7, y8)
+	w8tow64 $ B.pack [y1, y2, y3, y4, y5, y6, y7, y8]
 
 fl :: Word64 -> Word64 -> Word64
 fl fin sk =
