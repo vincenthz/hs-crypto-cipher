@@ -18,10 +18,13 @@ import qualified Crypto.Cipher.Camellia as Camellia
 
 (Right key128) = AES.initKey128 $ B.replicate 16 0
 aesEncrypt128 = AES.encrypt key128
+aesEncrypt128CBC = AES.encryptCBC key128 (B.replicate 16 0)
 (Right key192) = AES.initKey192 $ B.replicate 24 0
 aesEncrypt192 = AES.encrypt key192
+aesEncrypt192CBC = AES.encryptCBC key192 (B.replicate 16 0)
 (Right key256) = AES.initKey256 $ B.replicate 32 0
 aesEncrypt256 = AES.encrypt key256
+aesEncrypt256CBC = AES.encryptCBC key256 (B.replicate 16 0)
 
 (Right camelliaKey128) = Camellia.initKey $ B.replicate 16 0
 camelliaEncrypt128 = Camellia.encrypt camelliaKey128
@@ -70,8 +73,11 @@ main = withConfig defaultConfig $ do
 		[ ("RC4"        , rc4Encrypt)
 		, ("Camellia128", camelliaEncrypt128)
 		, ("AES128"     , aesEncrypt128)
+		, ("AES128-CBC" , aesEncrypt128CBC)
 		, ("AES192"     , aesEncrypt192)
+		, ("AES192-CBC" , aesEncrypt192CBC)
 		, ("AES256"     , aesEncrypt256)
+		, ("AES256-CBC" , aesEncrypt256CBC)
 		]
 	liftIO $ printf "%12s| %12s %12s %12s %12s %12s %12s\n"
 	                "cipher" "16 bytes" "32 bytes" "64 bytes" "512 bytes" "1024 bytes" "4096 bytes"
