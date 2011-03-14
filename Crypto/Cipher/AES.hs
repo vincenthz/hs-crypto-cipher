@@ -123,8 +123,8 @@ encryptCBC key iv b
 {- | encrypt using simple EBC mode -}
 encrypt :: Key -> B.ByteString -> B.ByteString
 encrypt key b
-	| B.length b `mod` 16 == 0 = B.concat $ doChunks (coreEncrypt key) b
-	| otherwise                = error "invalid data length"
+	| B.length b `mod` 16 /= 0 = error "invalid data length"
+	| otherwise                = B.concat $ doChunks (coreEncrypt key) b
 
 {- | decrypt using CBC mode
  - IV need to be 16 bytes and the data to decrypt a multiple of 16 bytes -}
@@ -142,8 +142,8 @@ decryptCBC key iv b
 {- | decrypt using simple EBC mode -}
 decrypt :: Key -> B.ByteString -> B.ByteString
 decrypt key b
-	| B.length b `mod` 16 == 0 = B.concat $ doChunks (coreDecrypt key) b
-	| otherwise                = error "invalid data length"
+	| B.length b `mod` 16 /= 0 = error "invalid data length"
+	| otherwise                = B.concat $ doChunks (coreDecrypt key) b
 
 doChunks :: (B.ByteString -> B.ByteString) -> B.ByteString -> [B.ByteString]
 doChunks f b =
