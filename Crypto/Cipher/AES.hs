@@ -203,12 +203,25 @@ aesMainInv nbr key blk = do
 		shiftRowsInv blk >> addRoundKey key i blk >> mixColumnsInv blk
 	shiftRowsInv blk >> addRoundKey key 0 blk
 
-{- 0 -> 0, 1 -> 4, ... -}
-swapIndexes :: Vector Int
-swapIndexes = V.fromList [ 0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15 ]
 {-# INLINE swapIndex #-}
 swapIndex :: Int -> Int
-swapIndex i = V.unsafeIndex swapIndexes i
+swapIndex 0 = 0
+swapIndex 1 = 4
+swapIndex 2 = 8
+swapIndex 3 = 12
+swapIndex 4 = 1
+swapIndex 5 = 5
+swapIndex 6 = 9
+swapIndex 7 = 13
+swapIndex 8 = 2
+swapIndex 9 = 6
+swapIndex 10 = 10
+swapIndex 11 = 14
+swapIndex 12 = 3
+swapIndex 13 = 7
+swapIndex 14 = 11
+swapIndex 15 = 15
+swapIndex _  = 0
 
 coreExpandKey :: Vector Word8 -> Key
 coreExpandKey vkey
