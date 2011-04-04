@@ -23,7 +23,7 @@ Flag benchmark
 Library
   Build-Depends:     base >= 4 && < 5
                    , bytestring
-                   , vector
+                   , vector >= 0.7
                    , primitive
                    , crypto-api >= 0.5
                    , tagged
