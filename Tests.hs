@@ -9,6 +9,7 @@ import System.IO (hFlush, stdout)
 
 import Control.Monad
 import Control.Arrow (first)
+import Control.Applicative ((<$>))
 
 import Data.List (intercalate)
 import Data.Char
@@ -22,12 +23,13 @@ import qualified Crypto.Hash.SHA1 as SHA1
 
 -- numbers
 import Number.ModArithmetic
--- ciphers
+-- ciphers/Kexch
 import qualified Crypto.Cipher.AES as AES
 import qualified Crypto.Cipher.RC4 as RC4
 import qualified Crypto.Cipher.Camellia as Camellia
 import qualified Crypto.Cipher.RSA as RSA
 import qualified Crypto.Cipher.DSA as DSA
+import qualified Crypto.Cipher.DH as DH
 import Crypto.Random
 
 encryptStream fi fc key plaintext = B.unpack $ snd $ fc (fi key) plaintext
@@ -359,6 +361,20 @@ prop_dsa_valid (RSAMessage msg) =
 		Right (signature, rng') = DSA.sign rng (SHA1.hash) dsaPrivatekey msg
 
 {-----------------------------------------------------------------------------------------------}
+{- testing DH -}
+{-----------------------------------------------------------------------------------------------}
+instance Arbitrary DH.PrivateNumber where
+	arbitrary = fromIntegral <$> (suchThat (arbitrary :: Gen Integer) (\x -> x >= 1))
+
+prop_dh_valid (xa, xb) = sa == sb
+	where
+		sa = DH.getShared dhparams xa yb
+		sb = DH.getShared dhparams xb ya
+		yb = DH.generatePublic dhparams xb
+		ya = DH.generatePublic dhparams xa
+		dhparams = (11, 7)
+
+{-----------------------------------------------------------------------------------------------}
 {- testing AES -}
 {-----------------------------------------------------------------------------------------------}
 data AES128Message = AES128Message B.ByteString B.ByteString B.ByteString deriving (Show, Eq)
@@ -451,6 +467,9 @@ main = do
 
 	run_test "AES256 (ECB) decrypt.encrypt = id" prop_aes256_ecb_valid
 	run_test "AES256 (CBC) decrypt.encrypt = id" prop_aes256_cbc_valid
+
+	-- DH Tests
+	run_test "DH test" prop_dh_valid
 
 	-- RSA Tests
 	run_test "RSA verify . sign(slow) = true" prop_rsa_sign_slow_valid

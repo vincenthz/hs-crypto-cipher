@@ -33,6 +33,7 @@ Library
                      Crypto.Cipher.Camellia
                      Crypto.Cipher.RSA
                      Crypto.Cipher.DSA
+                     Crypto.Cipher.DH
   other-modules:     Number.ModArithmetic
                      Number.Serialize
                      Number.Generate
