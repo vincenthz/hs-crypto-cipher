@@ -23,6 +23,7 @@ import qualified Crypto.Hash.SHA1 as SHA1
 
 -- numbers
 import Number.ModArithmetic
+import Number.Basic (sqrti)
 -- ciphers/Kexch
 import qualified Crypto.Cipher.AES as AES
 import qualified Crypto.Cipher.RC4 as RC4
@@ -263,6 +264,10 @@ prop_modinv_valid (a, m)
 			Nothing   -> True
 	| otherwise       = True
 
+prop_sqrti_valid i
+	| i <= 0    = True
+	| otherwise = l*l <= i && i <= u*u where (l, u) = sqrti i
+
 newtype RSAMessage = RSAMessage B.ByteString deriving (Show, Eq)
 
 instance Arbitrary RSAMessage where
@@ -457,6 +462,7 @@ main = do
 	run_test "gcde binary valid" prop_gcde_binary_valid
 	run_test "exponantiation RTL valid" prop_modexp_rtl_valid
 	run_test "inverse valid" prop_modinv_valid
+	run_test "sqrt integer valid" prop_sqrti_valid
 
 	-- AES Tests
 	run_test "AES128 (ECB) decrypt.encrypt = id" prop_aes128_ecb_valid
