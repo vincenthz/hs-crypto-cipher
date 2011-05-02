@@ -1,11 +1,43 @@
 {-# LANGUAGE BangPatterns #-}
 module Number.Basic
-	(
-	  gcde_binary
+	( sqrti
+	, gcde_binary
 	, areEven
 	) where
 
 import Data.Bits
+
+-- | sqrti returns two integer (l,b) so that l <= sqrt i <= b
+-- the implementation is quite naive, use an approximation for the first number
+-- and use a dichotomy algorithm to compute the bound relatively efficiently.
+sqrti :: Integer -> (Integer, Integer)
+sqrti i
+	| i < 0     = error "cannot compute negative square root"
+	| i == 0    = (0,0)
+	| i == 1    = (1,1)
+	| i == 2    = (1,2)
+	| otherwise = loop x0
+		where
+			nbdigits = length $ show i
+			x0n = (if even nbdigits then nbdigits - 2 else nbdigits - 1) `div` 2
+			x0  = if even nbdigits then 2 * 10 ^ x0n else 6 * 10 ^ x0n
+			loop x = case compare (sq x) i of
+				LT -> iterUp x
+				EQ -> (x, x)
+				GT -> iterDown x
+			iterUp lb = if sq ub >= i then iter lb ub else iterUp ub
+				where ub = lb * 2
+			iterDown ub = if sq lb >= i then iterDown lb else iter lb ub
+				where lb = ub `div` 2
+			iter lb ub
+				| lb == ub   = (lb, ub)
+				| lb+1 == ub = (lb, ub)
+				| otherwise  =
+					let d = (ub - lb) `div` 2 in
+					if sq (lb + d) >= i
+						then iter lb (ub-d)
+						else iter (lb+d) ub
+			sq a = a * a
 
 -- | get the extended GCD of two integer using the extended binary algorithm (HAC 14.61)
 -- get (x,y,d) where d = gcd(a,b) and x,y satisfying ax + by = d
