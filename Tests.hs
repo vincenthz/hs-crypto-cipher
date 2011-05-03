@@ -264,9 +264,7 @@ prop_modinv_valid (a, m)
 			Nothing   -> True
 	| otherwise       = True
 
-prop_sqrti_valid i
-	| i <= 0    = True
-	| otherwise = l*l <= i && i <= u*u where (l, u) = sqrti i
+prop_sqrti_valid (Positive i) = l*l <= i && i <= u*u where (l, u) = sqrti i
 
 newtype RSAMessage = RSAMessage B.ByteString deriving (Show, Eq)
 
