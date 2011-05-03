@@ -24,6 +24,8 @@ import qualified Crypto.Hash.SHA1 as SHA1
 -- numbers
 import Number.ModArithmetic
 import Number.Basic (sqrti)
+import Number.Prime
+import Number.Serialize
 -- ciphers/Kexch
 import qualified Crypto.Cipher.AES as AES
 import qualified Crypto.Cipher.RC4 as RC4
@@ -266,6 +268,27 @@ prop_modinv_valid (a, m)
 
 prop_sqrti_valid (Positive i) = l*l <= i && i <= u*u where (l, u) = sqrti i
 
+prop_generate_prime_valid i =
+	-- becuase of the next naive test, we can't generate easily number above 32 bits
+	-- otherwise it slows down the tests to uselessness. when AKS or ECPP is implemented
+	-- we can revisit the number here
+	let p = withAleasInteger rng i (\g -> generatePrime g 32) in
+	-- FIXME test if p is around 32 bits
+	primalityTestNaive p
+
+prop_miller_rabin_valid i
+	| i <= 3    = True
+	| otherwise =
+		-- miller rabin only returns with certitude that the integer is composite.
+		let b = withAleasInteger rng i (\g -> isProbablyPrime g i) in
+		(b == False && primalityTestNaive i == False) || b == True
+
+withAleasInteger rng i f = case reseed (i2osp (if i < 0 then -i else i)) rng of
+	Left _     -> error "impossible"
+	Right rng' -> case f rng' of
+		Left _  -> error "impossible"
+		Right v -> fst v
+
 newtype RSAMessage = RSAMessage B.ByteString deriving (Show, Eq)
 
 instance Arbitrary RSAMessage where
@@ -464,6 +487,8 @@ main = do
 	run_test "exponantiation RTL valid" prop_modexp_rtl_valid
 	run_test "inverse valid" prop_modinv_valid
 	run_test "sqrt integer valid" prop_sqrti_valid
+	run_test "primality test Miller Rabin" prop_miller_rabin_valid
+	run_test "Generate prime" prop_generate_prime_valid
 
 	-- AES Tests
 	run_test "AES128 (ECB) decrypt.encrypt = id" prop_aes128_ecb_valid
