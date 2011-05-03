@@ -295,7 +295,10 @@ instance CryptoRandomGen Rng where
 	newGen _       = Right (Rng (2,3))
 	genSeedLength  = 0
 	genBytes len g = Right $ first B.pack $ getBytes len g
-	reseed         = undefined
+	reseed bs (Rng (a,b)) = Right $ Rng (fromIntegral a', fromIntegral b') where
+		a' = (fromIntegral a) + i `div` 2141
+		b' = (fromIntegral b) + i `mod` 53152
+		i = os2ip bs
 
 rng = Rng (1,2) 
 
