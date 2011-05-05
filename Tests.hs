@@ -299,7 +299,7 @@ data Rng = Rng (Int, Int)
 getByte :: Rng -> (Word8, Rng)
 getByte (Rng (mz, mw)) =
 	let mz2 = 36969 * (mz `mod` 65536) in
-	let mw2 = 18000 * (mw `mod` 65536) in
+	let mw2 = 18070 * (mw `mod` 65536) in
 	(fromIntegral (mz2 + mw2), Rng (mz2, mw2))
 
 getBytes 0 rng = ([], rng)
@@ -312,9 +312,8 @@ instance CryptoRandomGen Rng where
 	newGen _       = Right (Rng (2,3))
 	genSeedLength  = 0
 	genBytes len g = Right $ first B.pack $ getBytes len g
-	reseed bs (Rng (a,b)) = Right $ Rng (fromIntegral a', fromIntegral b') where
-		a' = (fromIntegral a) + i `div` 2141
-		b' = (fromIntegral b) + i `mod` 53152
+	reseed bs (Rng (a,b)) = Right $ Rng (fromIntegral a', b) where
+		a' = ((fromIntegral a) + i * 36969) `mod` 65536
 		i = os2ip bs
 
 rng = Rng (1,2) 
