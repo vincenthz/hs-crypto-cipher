@@ -23,7 +23,7 @@ import qualified Crypto.Hash.SHA1 as SHA1
 
 -- numbers
 import Number.ModArithmetic
-import Number.Basic (sqrti)
+import Number.Basic
 import Number.Prime
 import Number.Serialize
 -- ciphers/Kexch
@@ -247,20 +247,16 @@ utests = concatMap (\(name, v, f) -> map (\(k,p,e) -> name ~: name ~: e ~=? f k 
 {- end of units tests -}
 {- start of QuickCheck verification -}
 
--- FIXME better to tweak the property to generate positive integer instead of this.
+prop_gcde_binary_valid (Positive a, Positive b) =
+	let (x,y,v)    = gcde_binary a b in
+	let (x',y',v') = gcde a b in
+	and [v==v', a*x' + b*y' == v', a*x + b*y == v, gcd a b == v]
 
-prop_gcde_binary_valid (a, b)
-	| a > 0 && b >= 0 =
-		let (x,y,v) = gcde_binary a b in
-		and [a*x + b*y == v, gcd a b == v]
-	| otherwise          = True
+prop_modexp_rtl_valid (NonNegative a, NonNegative b, Positive m) =
+	exponantiation_rtl_binary a b m == ((a ^ b) `mod` m)
 
-prop_modexp_rtl_valid (a, b, m)
-	| m > 0 && a >= 0 && b >= 0 = exponantiation_rtl_binary a b m == ((a ^ b) `mod` m)
-	| otherwise                 = True
-
-prop_modinv_valid (a, m)
-	| m > 1 && a > 0 =
+prop_modinv_valid (Positive a, Positive m)
+	| m > 1 =
 		case inverse a m of
 			Just ainv -> (ainv * a) `mod` m == 1
 			Nothing   -> True
