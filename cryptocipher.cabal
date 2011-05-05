@@ -37,6 +37,8 @@ Library
   other-modules:     Number.ModArithmetic
                      Number.Serialize
                      Number.Generate
+                     Number.Basic
+                     Number.Prime
   ghc-options:       -Wall
 
 Executable           Tests
