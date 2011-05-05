@@ -1,6 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 module Number.Basic
 	( sqrti
+	, gcde
 	, gcde_binary
 	, areEven
 	) where
@@ -38,6 +39,15 @@ sqrti i
 						then iter lb (ub-d)
 						else iter (lb+d) ub
 			sq a = a * a
+
+-- | get the extended GCD of two integer using integer divMod
+gcde :: Integer -> Integer -> (Integer, Integer, Integer)
+gcde a b = if d < 0 then (-x,-y,-d) else (x,y,d) where
+	(d, x, y)                     = f (a,1,0) (b,0,1)
+	f t              (0, _, _)    = t
+	f (a', sa, ta) t@(b', sb, tb) =
+		let (q, r) = a' `divMod` b' in
+		f t (r, sa - (q * sb), ta - (q * tb))
 
 -- | get the extended GCD of two integer using the extended binary algorithm (HAC 14.61)
 -- get (x,y,d) where d = gcd(a,b) and x,y satisfying ax + by = d
