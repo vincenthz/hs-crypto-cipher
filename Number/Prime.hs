@@ -48,7 +48,7 @@ primalityTestMillerRabin rng tries n
 		loop g _     0 = return (True, g)
 		loop g (s,d) k = generateBetween g 2 (n-2) >>= \(a, g') ->
 			let x = expmod a d n in
-			if x == (fromIntegral 1) || x == (n-1)
+			if x == (1 :: Integer) || x == (n-1)
 				then loop g' (s,d) (k-1)
 				else loop' g' (s,d) (k-1) ((x*x) `mod` n) 1
 		-- loop from 1 to s-1. if we reach the end then it's composite
