@@ -17,6 +17,8 @@ module Crypto.Cipher.DH
 	) where
 
 import Number.ModArithmetic (exponantiation_rtl_binary)
+import Number.Prime
+import Crypto.Random
 
 type Params = (Integer,Integer) {- P prime, G generator -}
 
@@ -28,6 +30,12 @@ newtype PrivateNumber = PrivateNumber Integer {- X -}
 
 newtype SharedKey = SharedKey Integer {- S -}
 	deriving (Show,Read,Eq,Enum,Real,Num,Ord)
+
+generateParams :: CryptoRandomGen g => g -> Params
+generateParams = undefined
+
+generatePrivate :: CryptoRandomGen g => g -> PrivateNumber
+generatePrivate rng = undefined
 
 generatePublic :: Params -> PrivateNumber -> PublicNumber
 generatePublic (p,g) (PrivateNumber x) = PublicNumber $ exponantiation_rtl_binary g x p
