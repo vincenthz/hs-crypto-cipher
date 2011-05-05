@@ -322,6 +322,14 @@ rng = Rng (1,2)
 {- testing RSA -}
 {-----------------------------------------------------------------------------------------------}
 
+prop_rsa_generate_valid (Positive i, RSAMessage msgz) =
+	let keysz = 64 in
+	let (pub,priv) = withAleasInteger rng i (\g -> RSA.generate g keysz 65537) in
+	let msg = B.take (keysz - 11) msgz in
+	(RSA.private_p priv * RSA.private_q priv == RSA.private_n priv) &&
+	((RSA.private_d priv * RSA.public_e pub) `mod` ((RSA.private_p priv - 1) * (RSA.private_q priv - 1)) == 1) &&
+	(either Left (RSA.decrypt priv . fst) $ RSA.encrypt rng pub msg) == Right msg
+
 prop_rsa_valid fast (RSAMessage msg) =
 	(either Left (RSA.decrypt pk . fst) $ RSA.encrypt rng rsaPublickey msg) == Right msg
 	where pk       = if fast then rsaPrivatekey else rsaPrivatekey { RSA.private_p = 0, RSA.private_q = 0 }
@@ -499,6 +507,7 @@ main = do
 	run_test "DH test" prop_dh_valid
 
 	-- RSA Tests
+	run_test "RSA generate" prop_rsa_generate_valid
 	run_test "RSA verify . sign(slow) = true" prop_rsa_sign_slow_valid
 	run_test "RSA verify . sign(fast) = true" prop_rsa_sign_fast_valid
 
