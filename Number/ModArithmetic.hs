@@ -2,7 +2,6 @@
 module Number.ModArithmetic
 	( exponantiation_rtl_binary
 	, inverse
-	, gcde_binary
 	) where
 
 import Number.Basic (gcde_binary)
