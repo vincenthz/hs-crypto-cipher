@@ -13,6 +13,7 @@ module Crypto.Cipher.RSA
 	, PrivateKey(..)
 	, HashF
 	, HashASN1
+	, generate
 	, decrypt
 	, encrypt
 	, sign
@@ -23,8 +24,10 @@ import Control.Arrow (first)
 import Crypto.Random
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
-import Number.ModArithmetic (exponantiation_rtl_binary)
+import Number.ModArithmetic (exponantiation_rtl_binary, inverse)
+import Number.Prime (generatePrime)
 import Number.Serialize
+import Data.Maybe (fromJust)
 
 data Error =
 	  MessageSizeIncorrect      -- ^ the message to decrypt is not of the correct size (need to be == private_size)
@@ -122,6 +125,40 @@ verify hash hashdesc pk m sm = do
 	s  <- makeSignature hash hashdesc (public_sz pk) m
 	em <- i2ospOf (public_sz pk) $ expmod (os2ip sm) (public_e pk) (public_n pk)
 	Right (s == em)
+
+-- | generate a pair of (private, public) key of size in bytes.
+generate :: CryptoRandomGen g => g -> Int -> Integer -> Either GenError ((PublicKey, PrivateKey), g)
+generate rng size e = do
+	((p,q), rng') <- generatePQ rng
+	let n   = p * q
+	let phi = (p-1)*(q-1)
+	case inverse e phi of
+		Nothing -> generate rng' size e
+		Just d  -> do
+			let priv = PrivateKey
+				{ private_sz   = size
+				, private_n    = n
+				, private_d    = d
+				, private_p    = p
+				, private_q    = q
+				, private_dP   = d `mod` (p-1)
+				, private_dQ   = d `mod` (q-1)
+				, private_qinv = fromJust $ inverse q p -- q and p are coprime, so fromJust is safe.
+				}
+			let pub = PublicKey
+				{ public_sz = size
+				, public_n  = n
+				, public_e  = e
+				}
+			return ((pub, priv), rng')
+	where
+		generatePQ g = do
+			(p, g')  <- generatePrime g (8 * (size `div` 2))
+			(q, g'') <- generateQ p g'
+			return ((p,q), g'')
+		generateQ p h = do
+			(q, h') <- generatePrime h (8 * (size - (size `div` 2)))
+			if p == q then generateQ p h' else return (q, h')
 
 {- makeSignature for sign and verify -}
 makeSignature :: HashF -> HashASN1 -> Int -> ByteString -> Either Error ByteString
