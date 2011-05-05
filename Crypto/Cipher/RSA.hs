@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleInstances, CPP #-}
-
 -- |
 -- Module      : Crypto.Cipher.RSA
 -- License     : BSD-style
@@ -20,6 +18,7 @@ module Crypto.Cipher.RSA
 	, verify
 	) where
 
+import Control.Monad.Error ()
 import Control.Arrow (first)
 import Crypto.Random
 import Data.ByteString (ByteString)
@@ -57,13 +56,6 @@ data PrivateKey = PrivateKey
 
 type HashF = ByteString -> ByteString
 type HashASN1 = ByteString
-
-#if ! (MIN_VERSION_base(4,3,0))
-instance Monad (Either Error) where
-	return          = Right
-	(Left x) >>= _  = Left x
-	(Right x) >>= f = f x
-#endif
 
 padPKCS1 :: CryptoRandomGen g => g -> Int -> ByteString -> Either Error (ByteString, g)
 padPKCS1 rng len m = do
