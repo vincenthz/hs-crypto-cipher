@@ -23,5 +23,5 @@ exponantiation_rtl_binary b e m = loop e b 1
 
 -- | inverse computes the modular inverse as in g^(-1) mod m
 inverse :: Integer -> Integer -> Maybe Integer
-inverse g m = if d > 1 then Nothing else Just x
+inverse g m = if d > 1 then Nothing else Just (x `mod` m)
 	where (x,_,d) = gcde_binary g m
