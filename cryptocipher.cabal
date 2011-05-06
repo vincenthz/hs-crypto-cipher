@@ -1,5 +1,5 @@
 Name:                cryptocipher
-Version:             0.2.9
+Version:             0.2.10
 Description:         Symmetrical Block, Stream and PubKey Ciphers
 License:             BSD3
 License-file:        LICENSE
