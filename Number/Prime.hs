@@ -22,13 +22,16 @@ isProbablyPrime rng n
 	| otherwise                                            = primalityTestMillerRabin rng 30 n
 
 generatePrime :: CryptoRandomGen g => g -> Int -> Either GenError (Integer, g)
-generatePrime rng bits = generateOfSize rng bits >>= \(sp, rng') -> findPrimeFrom rng' sp
+generatePrime rng bits = case generateOfSize rng bits of
+	Left err         -> Left err
+	Right (sp, rng') -> findPrimeFrom rng' sp
 
 findPrimeFrom :: CryptoRandomGen g => g -> Integer -> Either GenError (Integer, g)
 findPrimeFrom rng n
 	| even n        = findPrimeFrom rng (n+1)
-	| otherwise     = isProbablyPrime rng n
-	              >>= \(isPPrime, rng') -> if isPPrime then return (n, rng') else findPrimeFrom rng' (n+2)
+	| otherwise     = case isProbablyPrime rng n of
+		Left err               -> Left err
+		Right (isPPrime, rng') -> if isPPrime then Right (n, rng') else findPrimeFrom rng' (n+2)
 
 -- | Miller Rabin algorithm return if the number is probably prime or composite.
 -- the tries parameter is the number of recursion, that determines the accuracy of the test.
@@ -45,12 +48,14 @@ primalityTestMillerRabin rng tries n
 			| otherwise     = factorise (s+1) (v `shiftR` 1)
 		expmod = exponantiation_rtl_binary
 		-- when iteration reach zero, we have a probable prime
-		loop g _     0 = return (True, g)
-		loop g (s,d) k = generateBetween g 2 (n-2) >>= \(a, g') ->
-			let x = expmod a d n in
-			if x == (1 :: Integer) || x == (n-1)
-				then loop g' (s,d) (k-1)
-				else loop' g' (s,d) (k-1) ((x*x) `mod` n) 1
+		loop g _     0 = Right (True, g)
+		loop g (s,d) k = case generateBetween g 2 (n-2) of
+			Left err      -> Left err
+			Right (a, g') ->
+				let x = expmod a d n in
+				if x == (1 :: Integer) || x == (n-1)
+					then loop g' (s,d) (k-1)
+					else loop' g' (s,d) (k-1) ((x*x) `mod` n) 1
 		-- loop from 1 to s-1. if we reach the end then it's composite
 		loop' g o@(s,_) km1 x2 r
 			| r == s      = Right (False, g)

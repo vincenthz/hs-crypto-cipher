@@ -28,7 +28,6 @@ Library
                    , crypto-api >= 0.5
                    , tagged
                    , cereal
-                   , mtl
   Exposed-modules:   Crypto.Cipher.RC4
                      Crypto.Cipher.AES
                      Crypto.Cipher.Camellia

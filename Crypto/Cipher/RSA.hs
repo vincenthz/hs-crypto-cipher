@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleInstances, CPP #-}
+
 -- |
 -- Module      : Crypto.Cipher.RSA
 -- License     : BSD-style
@@ -18,7 +20,6 @@ module Crypto.Cipher.RSA
 	, verify
 	) where
 
-import Control.Monad.Error ()
 import Control.Arrow (first)
 import Crypto.Random
 import Data.ByteString (ByteString)
@@ -56,6 +57,13 @@ data PrivateKey = PrivateKey
 
 type HashF = ByteString -> ByteString
 type HashASN1 = ByteString
+
+#if ! (MIN_VERSION_base(4,3,0))
+instance Monad (Either Error) where
+	return          = Right
+	(Left x) >>= _  = Left x
+	(Right x) >>= f = f x
+#endif
 
 padPKCS1 :: CryptoRandomGen g => g -> Int -> ByteString -> Either Error (ByteString, g)
 padPKCS1 rng len m = do
@@ -119,7 +127,7 @@ verify hash hashdesc pk m sm = do
 	Right (s == em)
 
 -- | generate a pair of (private, public) key of size in bytes.
-generate :: CryptoRandomGen g => g -> Int -> Integer -> Either GenError ((PublicKey, PrivateKey), g)
+generate :: CryptoRandomGen g => g -> Int -> Integer -> Either Error ((PublicKey, PrivateKey), g)
 generate rng size e = do
 	((p,q), rng') <- generatePQ rng
 	let n   = p * q
@@ -142,15 +150,16 @@ generate rng size e = do
 				, public_n  = n
 				, public_e  = e
 				}
-			return ((pub, priv), rng')
+			Right ((pub, priv), rng')
 	where
 		generatePQ g = do
-			(p, g')  <- generatePrime g (8 * (size `div` 2))
+			(p, g')  <- genPrime g (8 * (size `div` 2))
 			(q, g'') <- generateQ p g'
 			return ((p,q), g'')
 		generateQ p h = do
-			(q, h') <- generatePrime h (8 * (size - (size `div` 2)))
+			(q, h') <- genPrime h (8 * (size - (size `div` 2)))
 			if p == q then generateQ p h' else return (q, h')
+		genPrime g sz = either (Left . RandomGenFailure) Right $ generatePrime g sz
 
 {- makeSignature for sign and verify -}
 makeSignature :: HashF -> HashASN1 -> Int -> ByteString -> Either Error ByteString
