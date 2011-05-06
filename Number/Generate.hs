@@ -4,6 +4,7 @@ module Number.Generate
 	, generateOfSize
 	) where
 
+import Control.Monad.Error ()
 import Number.Serialize
 import Crypto.Random
 import qualified Data.ByteString as B
