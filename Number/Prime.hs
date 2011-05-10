@@ -21,6 +21,7 @@ isProbablyPrime rng n
 	| any (\p -> p `divides` n) (filter (< n) smallPrimes) = Right (False, rng)
 	| otherwise                                            = primalityTestMillerRabin rng 30 n
 
+-- | generate a prime number of the required bitsize
 generatePrime :: CryptoRandomGen g => g -> Int -> Either GenError (Integer, g)
 generatePrime rng bits = case generateOfSize rng bits of
 	Left err         -> Left err
@@ -79,9 +80,9 @@ primalityTestAKS n = undefined
 		-- for p prime, the euler totient (# of coprime to n) is clearly n -1
 		totient = n-1
 		ubound = (fst $ sqrti totient) * (logi n)
-		logi n
-			| n == 0    = 0
-			| otherwise = 1 + logi (n `shiftR` 1)
+		logi z
+			| z == 0    = 0
+			| otherwise = 1 + logi (z `shiftR` 1)
 
 -- | Test naively is integer is prime.
 -- while naive, we skip even number and stop iteration at i > sqrt(n)
@@ -149,4 +150,5 @@ smallPrimes =
 	]
 
 {-# INLINE divides #-}
+divides :: Integer -> Integer -> Bool
 divides i n = n `mod` i == 0
