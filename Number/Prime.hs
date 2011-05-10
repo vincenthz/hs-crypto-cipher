@@ -1,5 +1,6 @@
 module Number.Prime
 	( generatePrime
+	, generateSafePrime
 	, isProbablyPrime
 	, findPrimeFrom
 	, findPrimeFromWith
@@ -28,6 +29,18 @@ generatePrime :: CryptoRandomGen g => g -> Int -> Either GenError (Integer, g)
 generatePrime rng bits = case generateOfSize rng bits of
 	Left err         -> Left err
 	Right (sp, rng') -> findPrimeFrom rng' sp
+
+-- | generate a prime number of the form 2p+1 where p is also prime.
+-- it is also know as a Sophie Germaine prime or safe prime.
+--
+-- The number of safe prime is significantly smaller to the number of prime,
+-- as such it shouldn't be used if this number is supposed to be kept safe.
+generateSafePrime :: CryptoRandomGen g => g -> Int -> Either GenError (Integer, g)
+generateSafePrime rng bits = case generateOfSize rng bits of
+	Left err         -> Left err
+	Right (sp, rng') -> case findPrimeFromWith rng' (\g i -> isProbablyPrime g (2*i+1)) (sp `div` 2) of
+		Left err         -> Left err
+		Right (p, rng'') -> Right (2*p+1, rng'')
 
 -- | find a prime from a starting point where the property hold.
 findPrimeFromWith :: CryptoRandomGen g => g -> (g -> Integer -> Either GenError (Bool,g)) -> Integer -> Either GenError (Integer, g)
