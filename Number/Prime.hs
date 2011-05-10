@@ -1,6 +1,8 @@
 module Number.Prime
 	( generatePrime
 	, isProbablyPrime
+	, findPrimeFrom
+	, findPrimeFromWith
 	, primalityTestNaive
 	-- , primalityTestAKS
 	, primalityTestMillerRabin
@@ -27,12 +29,22 @@ generatePrime rng bits = case generateOfSize rng bits of
 	Left err         -> Left err
 	Right (sp, rng') -> findPrimeFrom rng' sp
 
-findPrimeFrom :: CryptoRandomGen g => g -> Integer -> Either GenError (Integer, g)
-findPrimeFrom rng n
-	| even n        = findPrimeFrom rng (n+1)
+-- | find a prime from a starting point where the property hold.
+findPrimeFromWith :: CryptoRandomGen g => g -> (g -> Integer -> Either GenError (Bool,g)) -> Integer -> Either GenError (Integer, g)
+findPrimeFromWith rng prop n
+	| even n        = findPrimeFromWith rng prop (n+1)
 	| otherwise     = case isProbablyPrime rng n of
 		Left err               -> Left err
-		Right (isPPrime, rng') -> if isPPrime then Right (n, rng') else findPrimeFrom rng' (n+2)
+		Right (False, rng')    -> findPrimeFromWith rng' prop (n+2)
+		Right (True, rng')     ->
+			case prop rng' n of
+				Left err             -> Left err
+				Right (False, rng'') -> findPrimeFromWith rng'' prop (n+2)
+				Right (True, rng'')  -> Right (n, rng'')
+
+-- | find a prime from a starting point with no specific property.
+findPrimeFrom :: CryptoRandomGen g => g -> Integer -> Either GenError (Integer, g)
+findPrimeFrom rng n = findPrimeFromWith rng (\g _ -> Right (True, g)) n
 
 -- | Miller Rabin algorithm return if the number is probably prime or composite.
 -- the tries parameter is the number of recursion, that determines the accuracy of the test.
