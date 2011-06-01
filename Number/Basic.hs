@@ -1,4 +1,11 @@
 {-# LANGUAGE BangPatterns #-}
+-- |
+-- Module      : Number.Basic
+-- License     : BSD-style
+-- Maintainer  : Vincent Hanquez <vincent@snarc.org>
+-- Stability   : experimental
+-- Portability : Good
+
 module Number.Basic
 	( sqrti
 	, gcde

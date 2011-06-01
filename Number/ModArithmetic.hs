@@ -1,4 +1,11 @@
 {-# LANGUAGE BangPatterns #-}
+-- |
+-- Module      : Number.ModArithmetic
+-- License     : BSD-style
+-- Maintainer  : Vincent Hanquez <vincent@snarc.org>
+-- Stability   : experimental
+-- Portability : Good
+
 module Number.ModArithmetic
 	( exponantiation_rtl_binary
 	, inverse
