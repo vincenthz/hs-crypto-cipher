@@ -38,6 +38,7 @@ Library
                      Number.Serialize
                      Number.Generate
                      Number.Basic
+                     Number.Polynomial
                      Number.Prime
   ghc-options:       -Wall
 
