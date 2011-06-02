@@ -28,7 +28,7 @@ import Number.ModArithmetic (exponantiation_rtl_binary)
 -- first a list of small primes are implicitely tested for divisibility,
 -- then the Miller Rabin algorithm is used with an accuracy of 30 recursions
 isProbablyPrime :: CryptoRandomGen g => g -> Integer -> Either GenError (Bool, g)
-isProbablyPrime rng n
+isProbablyPrime rng !n
 	| any (\p -> p `divides` n) (filter (< n) smallPrimes) = Right (False, rng)
 	| otherwise                                            = primalityTestMillerRabin rng 30 n
 
@@ -52,7 +52,7 @@ generateSafePrime rng bits = case generateOfSize rng bits of
 
 -- | find a prime from a starting point where the property hold.
 findPrimeFromWith :: CryptoRandomGen g => g -> (g -> Integer -> Either GenError (Bool,g)) -> Integer -> Either GenError (Integer, g)
-findPrimeFromWith rng prop n
+findPrimeFromWith rng prop !n
 	| even n        = findPrimeFromWith rng prop (n+1)
 	| otherwise     = case isProbablyPrime rng n of
 		Left err               -> Left err
@@ -70,37 +70,37 @@ findPrimeFrom rng n = findPrimeFromWith rng (\g _ -> Right (True, g)) n
 -- | Miller Rabin algorithm return if the number is probably prime or composite.
 -- the tries parameter is the number of recursion, that determines the accuracy of the test.
 primalityTestMillerRabin :: CryptoRandomGen g => g -> Int -> Integer -> Either GenError (Bool, g)
-primalityTestMillerRabin rng tries n
+primalityTestMillerRabin rng tries !n
 	| n <= 3     = error "Miller-Rabin requires tested value to be > 3"
 	| even n     = Right (False, rng)
 	| tries <= 0 = error "Miller-Rabin tries need to be > 0"
 	| otherwise  = loop rng (factorise 0 (n-1)) tries where
 		-- factorise n-1 into the form 2^s*d
 		factorise :: Integer -> Integer -> (Integer, Integer)
-		factorise s v
+		factorise !s !v
 			| v `testBit` 0 = (s, v)
 			| otherwise     = factorise (s+1) (v `shiftR` 1)
 		expmod = exponantiation_rtl_binary
 		-- when iteration reach zero, we have a probable prime
-		loop g _     0 = Right (True, g)
-		loop g (s,d) k = case generateBetween g 2 (n-2) of
+		loop g _       0 = Right (True, g)
+		loop g t@(_,d) k = case generateBetween g 2 (n-2) of
 			Left err      -> Left err
 			Right (a, g') ->
 				let x = expmod a d n in
 				if x == (1 :: Integer) || x == (n-1)
-					then loop g' (s,d) (k-1)
-					else loop' g' (s,d) (k-1) ((x*x) `mod` n) 1
+					then loop g' t (k-1)
+					else loop' g' t (k-1) ((x*x) `mod` n) 1
 		-- loop from 1 to s-1. if we reach the end then it's composite
-		loop' g o@(s,_) km1 x2 r
+		loop' g t@(s,_) km1 !x2 !r
 			| r == s      = Right (False, g)
 			| x2 == 1     = Right (False, g)
-			| x2 /= (n-1) = loop' g o km1 ((x2*x2) `mod` n) (r+1)
-			| otherwise   = loop g o km1
+			| x2 /= (n-1) = loop' g t km1 ((x2*x2) `mod` n) (r+1)
+			| otherwise   = loop g t km1
 			
 -- | AKS primality test return if the number is prime or composite
 -- it uses the following algorithm:
 --   Input: integer n > 1.
---   If n = ab for integers a > 0 and b > 1, output composite.
+--   If n = a^b for integers a > 0 and b > 1, output composite.
 --   Find the smallest r such that o_r(n) > log2(n).
 --   If 1 < gcd(a,n) < n for some a ≤ r, output composite.
 --   If n <= r, output prime.
@@ -110,7 +110,7 @@ primalityTestMillerRabin rng tries n
 primalityTestAKS :: Integer -> Bool
 primalityTestAKS n = undefined
 	where
-		-- for p prime, the euler totient (# of coprime to n) is clearly n -1
+		-- for p prime, the euler totient (# of coprime to n) is clearly n-1
 		totient = n-1
 		ubound = (fst $ sqrti totient) * (logi n)
 		logi z
