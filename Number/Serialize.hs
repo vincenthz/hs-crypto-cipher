@@ -1,6 +1,7 @@
 module Number.Serialize
 	( i2osp
 	, os2ip
+	, lengthBytes
 	) where
 
 import Data.ByteString (ByteString)
@@ -17,3 +18,9 @@ i2osp m = B.reverse $ B.unfoldr divMod256 m
 	where
 		divMod256 0 = Nothing
 		divMod256 n = Just (fromIntegral a,b) where (b,a) = n `divMod` 256
+
+-- | returns the number of bytes to store an integer with i2osp
+lengthBytes :: Integer -> Int
+lengthBytes n
+	| n < 256   = 1
+	| otherwise = 1 + lengthBytes (n `div` 256)

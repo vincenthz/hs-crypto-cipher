@@ -19,7 +19,7 @@ import Data.Bits ((.|.))
 -- | generate a positive integer between 0 and m.
 -- using as many bytes as necessary to the same size as m, that are converted to integer.
 generateMax :: CryptoRandomGen g => g -> Integer -> Either GenError (Integer, g)
-generateMax rng m = case genBytes (logiBytes m) rng of
+generateMax rng m = case genBytes (lengthBytes m) rng of
 	Left err         -> Left err
 	Right (bs, rng') -> Right (os2ip bs `mod` m, rng')
 
@@ -36,8 +36,3 @@ generateOfSize :: CryptoRandomGen g => g -> Int -> Either GenError (Integer, g)
 generateOfSize rng bits = case genBytes (bits `div` 8) rng of
 	Left err         -> Left err
 	Right (bs, rng') -> Right (os2ip $ snd $ B.mapAccumL (\acc w -> (0, w .|. acc)) 0xc0 bs, rng')
-
-logiBytes :: Integer -> Int
-logiBytes n
-	| n < 256   = 1
-	| otherwise = 1 + logiBytes (n `div` 256)
