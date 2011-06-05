@@ -13,7 +13,6 @@ module Number.Prime
 	, findPrimeFrom
 	, findPrimeFromWith
 	, primalityTestNaive
-	-- , primalityTestAKS
 	, primalityTestMillerRabin
 	, isCoprime
 	) where
@@ -96,26 +95,6 @@ primalityTestMillerRabin rng tries !n
 			| x2 == 1     = Right (False, g)
 			| x2 /= (n-1) = loop' g t km1 ((x2*x2) `mod` n) (r+1)
 			| otherwise   = loop g t km1
-			
--- | AKS primality test return if the number is prime or composite
--- it uses the following algorithm:
---   Input: integer n > 1.
---   If n = a^b for integers a > 0 and b > 1, output composite.
---   Find the smallest r such that o_r(n) > log2(n).
---   If 1 < gcd(a,n) < n for some a ≤ r, output composite.
---   If n <= r, output prime.
---   For a = 1 to lower-bound(sqrt(phi(n)) * log2(n)) do
---     if (X+a)n ≠ Xn+a (mod Xr − 1,n), output composite;
---   Output prime.
-primalityTestAKS :: Integer -> Bool
-primalityTestAKS n = undefined
-	where
-		-- for p prime, the euler totient (# of coprime to n) is clearly n-1
-		totient = n-1
-		ubound = (fst $ sqrti totient) * (logi n)
-		logi z
-			| z == 0    = 0
-			| otherwise = 1 + logi (z `shiftR` 1)
 
 -- | Test naively is integer is prime.
 -- while naive, we skip even number and stop iteration at i > sqrt(n)
