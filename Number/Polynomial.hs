@@ -8,12 +8,16 @@
 
 module Number.Polynomial
 	( Monomial(..)
+	-- * polynomial operations
 	, Polynomial
 	, toList
 	, fromList
 	, addPoly
 	, subPoly
 	, mulPoly
+	, squarePoly
+	, expPoly
+	, divPoly
 	, negPoly
 	) where
 
@@ -91,6 +95,13 @@ mulPoly p1@(Polynomial v1) p2@(Polynomial v2) =
 			where
 				a = maybe 0 id . getWeight p1
 				b = maybe 0 id . getWeight p2
+
+squarePoly p = p `mulPoly` p
+
+expPoly p e = loop e
+	where
+		loop t 0 = t
+		loop t n = loop (squarePoly t) (n-1)
 
 divPoly :: Polynomial -> Polynomial -> (Polynomial, Polynomial)
 divPoly p1 p2@(Polynomial pp2) = first fromList $ divLoop p1
