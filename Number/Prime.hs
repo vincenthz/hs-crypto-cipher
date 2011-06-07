@@ -38,7 +38,7 @@ generatePrime rng bits = case generateOfSize rng bits of
 	Right (sp, rng') -> findPrimeFrom rng' sp
 
 -- | generate a prime number of the form 2p+1 where p is also prime.
--- it is also know as a Sophie Germaine prime or safe prime.
+-- it is also knowed as a Sophie Germaine prime or safe prime.
 --
 -- The number of safe prime is significantly smaller to the number of prime,
 -- as such it shouldn't be used if this number is supposed to be kept safe.
