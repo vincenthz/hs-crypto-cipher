@@ -40,7 +40,12 @@ Library
                      Number.Basic
                      Number.Polynomial
                      Number.Prime
+                     System.Endian
   ghc-options:       -Wall
+  if arch(ppc) || arch(sparc)
+    cpp-options: -DBIG_ENDIAN
+  else
+    cpp-options: -DLITTLE_ENDIAN
 
 Executable           Tests
   Main-Is:           Tests.hs
@@ -53,6 +58,10 @@ Executable           Tests
                    , QuickCheck >= 2
   else
     Buildable:       False
+  if arch(ppc) || arch(sparc)
+    cpp-options: -DBIG_ENDIAN
+  else
+    cpp-options: -DLITTLE_ENDIAN
 
 Executable           Benchmarks
   Main-Is:           Benchmarks.hs
@@ -63,6 +72,10 @@ Executable           Benchmarks
                    , mtl
   else
     Buildable:       False
+  if arch(ppc) || arch(sparc)
+    cpp-options: -DBIG_ENDIAN
+  else
+    cpp-options: -DLITTLE_ENDIAN
 
 source-repository head
   type:     git
