@@ -24,6 +24,7 @@ Library
   Build-Depends:     base >= 4 && < 5
                    , bytestring
                    , vector >= 0.7
+                   , ghc-prim
                    , primitive
                    , crypto-api >= 0.5
                    , tagged
