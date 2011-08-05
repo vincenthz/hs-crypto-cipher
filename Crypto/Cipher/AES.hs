@@ -1,4 +1,4 @@
-{-# LANGUAGE MagicHash #-}
+{-# LANGUAGE BangPatterns, MagicHash #-}
 -- |
 -- Module      : Crypto.Cipher.AES
 -- License     : BSD-style
