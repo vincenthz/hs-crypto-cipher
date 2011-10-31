@@ -22,24 +22,12 @@ import Data.ByteString (ByteString)
 import Number.ModArithmetic (exponantiation_rtl_binary, inverse)
 import Number.Serialize
 import Number.Generate
+import Crypto.Types.PubKey.DSA
 
 data Error = 
 	  InvalidSignature          -- ^ signature is not valid r or s is not between the bound 0..q
 	| RandomGenFailure GenError -- ^ the random generator returns an error. give the opportunity to reseed for example.
 	deriving (Show,Eq)
-
-type Params = (Integer,Integer,Integer) {- P, G, Q -}
-type Signature = (Integer,Integer) {- R,S -}
-
-data PublicKey = PublicKey
-	{ public_params :: Params {- P, G, Q -}
-	, public_y      :: Integer
-	} deriving (Show)
-
-data PrivateKey = PrivateKey
-	{ private_params :: Params {- P, G, Q -}
-	, private_x      :: Integer
-	} deriving (Show)
 
 {-| sign message using the private key. -}
 sign :: CryptoRandomGen g => g -> (ByteString -> ByteString) -> PrivateKey -> ByteString -> Either GenError (Signature, g)

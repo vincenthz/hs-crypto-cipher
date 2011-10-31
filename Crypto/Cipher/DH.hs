@@ -21,19 +21,9 @@ module Crypto.Cipher.DH
 import Number.ModArithmetic (exponantiation_rtl_binary)
 import Number.Prime (generateSafePrime)
 import Number.Generate (generateOfSize)
+import Crypto.Types.PubKey.DH
 import Crypto.Random
 import Control.Arrow (first)
-
-type Params = (Integer,Integer) {- P prime, G generator -}
-
-newtype PublicNumber = PublicNumber Integer {- Y -}
-	deriving (Show,Read,Eq,Enum,Real,Num,Ord)
-
-newtype PrivateNumber = PrivateNumber Integer {- X -}
-	deriving (Show,Read,Eq,Enum,Real,Num,Ord)
-
-newtype SharedKey = SharedKey Integer {- S -}
-	deriving (Show,Read,Eq,Enum,Real,Num,Ord)
 
 -- | generate params from a specific generator (2 or 5 are common values)
 -- we generate a safe prime (a prime number of the form 2p+1 where p is also prime)
