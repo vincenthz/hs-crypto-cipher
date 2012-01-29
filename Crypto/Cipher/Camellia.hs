@@ -11,6 +11,7 @@
 module Crypto.Cipher.Camellia
 	( Key(..)
 	, initKey
+	, initKey128
 	, encrypt
 	, decrypt
 	) where
@@ -177,8 +178,11 @@ setKeyInterim keyseed =
 		in
 	(w64tow128 kL, w64tow128 kR, w64tow128 kA, w64tow128 kB)
 
-initKey :: B.ByteString -> Either String Key
-initKey keyseed
+{-# DEPRECATED initKey #-}
+initKey keyseed = initKey128 keySeed
+
+initKey128 :: B.ByteString -> Either String Key
+initKey128 keyseed
 	| B.length keyseed /= 16 = Left "wrong key size"
 	| otherwise              =
 		let (kL, _, kA, _) = setKeyInterim keyseed in
