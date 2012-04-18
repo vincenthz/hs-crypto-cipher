@@ -14,6 +14,7 @@ module Number.Prime
 	, findPrimeFromWith
 	, primalityTestNaive
 	, primalityTestMillerRabin
+	, primalityTestFermat
 	, isCoprime
 	) where
 
@@ -25,11 +26,13 @@ import Number.ModArithmetic (exponantiation_rtl_binary)
 
 -- | returns if the number is probably prime.
 -- first a list of small primes are implicitely tested for divisibility,
+-- then a fermat primality test is used with arbitrary numbers and
 -- then the Miller Rabin algorithm is used with an accuracy of 30 recursions
 isProbablyPrime :: CryptoRandomGen g => g -> Integer -> Either GenError (Bool, g)
 isProbablyPrime rng !n
 	| any (\p -> p `divides` n) (filter (< n) smallPrimes) = Right (False, rng)
-	| otherwise                                            = primalityTestMillerRabin rng 30 n
+	| primalityTestFermat 50 (n`div`2) n                   = primalityTestMillerRabin rng 30 n
+	| otherwise                                            = Right (False, rng)
 
 -- | generate a prime number of the required bitsize
 generatePrime :: CryptoRandomGen g => g -> Int -> Either GenError (Integer, g)
@@ -95,6 +98,17 @@ primalityTestMillerRabin rng tries !n
 			| x2 == 1     = Right (False, g)
 			| x2 /= (n-1) = loop' g t km1 ((x2*x2) `mod` n) (r+1)
 			| otherwise   = loop g t km1
+
+-- | Probabilitic Test using Fermat primility test.
+-- Beware of Carmichael numbers that are Fermat liars, i.e. this test
+-- is useless for them. always combines with some other test.
+primalityTestFermat :: Int -- ^ number of iterations of the algorithm
+                    -> Integer -- ^ starting a
+                    -> Integer -- ^ number to test for primality
+                    -> Bool
+primalityTestFermat n a p = and $ map expTest [a..(a+fromIntegral n)]
+    where !pm1 = p-1
+          expTest i = exponantiation_rtl_binary i pm1 p == 1
 
 -- | Test naively is integer is prime.
 -- while naive, we skip even number and stop iteration at i > sqrt(n)
