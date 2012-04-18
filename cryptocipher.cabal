@@ -10,11 +10,7 @@ Synopsis:            Symmetrical Block, Stream and PubKey Ciphers
 Category:            Cryptography
 Build-Type:          Simple
 Homepage:            http://github.com/vincenthz/hs-cryptocipher
-Cabal-Version:       >=1.6
-
-Flag test
-  Description:       Build unit test
-  Default:           False
+Cabal-Version:       >=1.8
 
 Flag benchmark
   Description:       Build benchmarks
@@ -49,21 +45,20 @@ Library
   else
     cpp-options: -DLITTLE_ENDIAN
 
-Executable           Tests
-  Main-Is:           Tests.hs
-  if flag(test)
-    Buildable:       True
-    Build-depends:   base >= 4 && < 5
-                   , HUnit
+Test-Suite test-cryptocipher
+  type:              exitcode-stdio-1.0
+  hs-source-dirs:    Tests
+  Main-Is:           tests.hs
+  Build-depends:     base >= 4 && < 5
+                   , crypto-api >= 0.5
+                   , cryptocipher
                    , bytestring
                    , cryptohash
+                   , vector
+                   , entropy
                    , QuickCheck >= 2
-  else
-    Buildable:       False
-  if arch(ppc) || arch(sparc)
-    cpp-options: -DBIG_ENDIAN
-  else
-    cpp-options: -DLITTLE_ENDIAN
+                   , test-framework >= 0.3.3 && < 0.6
+                   , test-framework-quickcheck2 >= 0.2.9 && < 0.3
 
 Executable           Benchmarks
   Main-Is:           Benchmarks.hs

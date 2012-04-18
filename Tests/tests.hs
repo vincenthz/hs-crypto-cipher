@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-import Test.HUnit ((~:), (~=?))
-import qualified Test.HUnit as Unit
+import Test.Framework (Test, defaultMain, testGroup)
+import Test.Framework.Providers.QuickCheck2 (testProperty)
 
 import Test.QuickCheck
 import Test.QuickCheck.Test
@@ -22,12 +22,16 @@ import qualified Data.ByteString.Char8 as BC
 import qualified Crypto.Hash.SHA1 as SHA1
 
 -- numbers
+{-
 import Number.ModArithmetic
 import Number.Basic
 import Number.Prime
 import Number.Serialize
+-}
 -- ciphers/Kexch
 import qualified Crypto.Cipher.AES as AES
+import qualified Crypto.Cipher.AES.Haskell as AESHaskell
+import qualified Crypto.Cipher.AES.X86NI as AESNI
 import qualified Crypto.Cipher.RC4 as RC4
 import qualified Crypto.Cipher.Camellia as Camellia
 import qualified Crypto.Cipher.RSA as RSA
@@ -238,15 +242,21 @@ vectors =
 	, ("AES128 Dec", vectors_aes128_dec,  encryptBlock aes128InitKey AES.decrypt)
 	, ("AES192 Dec", vectors_aes192_dec,  encryptBlock aes192InitKey AES.decrypt)
 	, ("AES256 Dec", vectors_aes256_dec,  encryptBlock aes256InitKey AES.decrypt)
-	, ("Camellia",   vectors_camellia128, encryptBlock Camellia.initKey Camellia.encrypt)
+	, ("Camellia",   vectors_camellia128, encryptBlock Camellia.initKey128 Camellia.encrypt)
 	]
 
+utests = map makeTests vectors
+	where makeTests (name, v, f) = testProperty name (and $ map makeTest v)
+		where makeTest (key,plaintext,expected) = expected == f key plaintext
+{-
 utests :: [Unit.Test]
 utests = concatMap (\(name, v, f) -> map (\(k,p,e) -> name ~: name ~: e ~=? f k p) v) vectors
+-}
 
 {- end of units tests -}
 {- start of QuickCheck verification -}
 
+{-
 prop_gcde_binary_valid (Positive a, Positive b) =
 	let (x,y,v)    = gcde_binary a b in
 	let (x',y',v') = gcde a b in
@@ -284,6 +294,7 @@ withAleasInteger rng i f = case reseed (i2osp (if i < 0 then -i else i)) rng of
 	Right rng' -> case f rng' of
 		Left _  -> error "impossible"
 		Right v -> fst v
+-}
 
 newtype RSAMessage = RSAMessage B.ByteString deriving (Show, Eq)
 
@@ -314,7 +325,7 @@ instance CryptoRandomGen Rng where
 	genBytes len g = Right $ first B.pack $ getBytes len g
 	reseed bs (Rng (a,b)) = Right $ Rng (fromIntegral a', b) where
 		a' = ((fromIntegral a) + i * 36969) `mod` 65536
-		i = os2ip bs
+		i = B.head bs
 
 rng = Rng (1,2) 
 
@@ -322,6 +333,7 @@ rng = Rng (1,2)
 {- testing RSA -}
 {-----------------------------------------------------------------------------------------------}
 
+{-
 prop_rsa_generate_valid (Positive i, RSAMessage msgz) =
 	let keysz = 64 in
 	let (pub,priv) = withAleasInteger rng i (\g -> RSA.generate g keysz 65537) in
@@ -329,6 +341,7 @@ prop_rsa_generate_valid (Positive i, RSAMessage msgz) =
 	(RSA.private_p priv * RSA.private_q priv == RSA.private_n priv) &&
 	((RSA.private_d priv * RSA.public_e pub) `mod` ((RSA.private_p priv - 1) * (RSA.private_q priv - 1)) == 1) &&
 	(either Left (RSA.decrypt priv . fst) $ RSA.encrypt rng pub msg) == Right msg
+-}
 
 prop_rsa_valid fast (RSAMessage msg) =
 	(either Left (RSA.decrypt pk . fst) $ RSA.encrypt rng rsaPublickey msg) == Right msg
@@ -473,18 +486,50 @@ prop_aes256_cbc_valid (AES256Message key iv msg) =
 {- main -}
 {-----------------------------------------------------------------------------------------------}
 
-args = stdArgs
-	{ replay     = Nothing
-	, maxSuccess = 200
-	, maxDiscard = 1000
-	, maxSize    = 200
-	}
+symCipherExpectedTests = testGroup "symmetric cipher KAT"
+	utests
 
-run_test n t = putStr ("  " ++ n ++ " ... ") >> hFlush stdout >> quickCheckWith args t
+symCipherMarshallTests = testGroup "symmetric cipher marshall"
+	[ testProperty "AES128 (ECB)" prop_aes128_ecb_valid
+	, testProperty "AES128 (CBC)" prop_aes128_cbc_valid
+	, testProperty "AES192 (ECB)" prop_aes192_ecb_valid
+	, testProperty "AES192 (CBC)" prop_aes192_cbc_valid
+	, testProperty "AES256 (ECB)" prop_aes256_ecb_valid
+	, testProperty "AES256 (CBC)" prop_aes256_cbc_valid
+	]
 
-main = do
-	Unit.runTestTT (Unit.TestList utests)
+asymEncryptionTests = testGroup "assymmetric cipher encryption"
+	[ testProperty "RSA (slow)" prop_rsa_slow_valid
+	, testProperty "RSA (fast)" prop_rsa_fast_valid
+	]
 
+asymSignatureTests = testGroup "assymmetric cipher signature"
+	[ testProperty "RSA (slow)" prop_rsa_sign_slow_valid
+	, testProperty "RSA (fast)" prop_rsa_sign_fast_valid
+	, testProperty "DSA" prop_dsa_valid
+	]
+
+asymOtherTests = testGroup "assymetric other tests"
+	[ testProperty "DH valid" prop_dh_valid
+	]
+
+arithmeticTests = testGroup "arithmetic"
+	[]
+
+{- run_test "RSA generate" prop_rsa_generate_valid -}
+
+tests :: [Test]
+tests =
+	[ symCipherExpectedTests
+	, symCipherMarshallTests
+	, arithmeticTests
+	, asymEncryptionTests
+	, asymSignatureTests
+	, asymOtherTests
+	]
+
+main = defaultMain tests
+{-
 	-- Number Tests
 	run_test "gcde binary valid" prop_gcde_binary_valid
 	run_test "exponantiation RTL valid" prop_modexp_rtl_valid
@@ -492,27 +537,4 @@ main = do
 	run_test "sqrt integer valid" prop_sqrti_valid
 	run_test "primality test Miller Rabin" prop_miller_rabin_valid
 	run_test "Generate prime" prop_generate_prime_valid
-
-	-- AES Tests
-	run_test "AES128 (ECB) decrypt.encrypt = id" prop_aes128_ecb_valid
-	run_test "AES128 (CBC) decrypt.encrypt = id" prop_aes128_cbc_valid
-
-	run_test "AES192 (ECB) decrypt.encrypt = id" prop_aes192_ecb_valid
-	run_test "AES192 (CBC) decrypt.encrypt = id" prop_aes192_cbc_valid
-
-	run_test "AES256 (ECB) decrypt.encrypt = id" prop_aes256_ecb_valid
-	run_test "AES256 (CBC) decrypt.encrypt = id" prop_aes256_cbc_valid
-
-	-- DH Tests
-	run_test "DH test" prop_dh_valid
-
-	-- RSA Tests
-	run_test "RSA generate" prop_rsa_generate_valid
-	run_test "RSA verify . sign(slow) = true" prop_rsa_sign_slow_valid
-	run_test "RSA verify . sign(fast) = true" prop_rsa_sign_fast_valid
-
-	run_test "RSA decrypt(slow).encrypt = id" prop_rsa_slow_valid
-	run_test "RSA decrypt(fast).encrypt = id" prop_rsa_fast_valid
-
-	-- DSA Tests
-	run_test "DSA verify . sign = true" prop_dsa_valid
+	-}
