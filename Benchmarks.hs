@@ -26,7 +26,7 @@ aesEncrypt192CBC = AES.encryptCBC key192 (B.replicate 16 0)
 aesEncrypt256 = AES.encrypt key256
 aesEncrypt256CBC = AES.encryptCBC key256 (B.replicate 16 0)
 
-(Right camelliaKey128) = Camellia.initKey $ B.replicate 16 0
+(Right camelliaKey128) = Camellia.initKey128 $ B.replicate 16 0
 camelliaEncrypt128 = Camellia.encrypt camelliaKey128
 
 rc4Key = RC4.initCtx $ replicate 16 0

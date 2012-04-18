@@ -10,7 +10,6 @@
 
 module Crypto.Cipher.Camellia
 	( Key(..)
-	, initKey
 	, initKey128
 	, encrypt
 	, decrypt
@@ -177,9 +176,6 @@ setKeyInterim keyseed =
 		(d4, d3)
 		in
 	(w64tow128 kL, w64tow128 kR, w64tow128 kA, w64tow128 kB)
-
-{-# DEPRECATED initKey #-}
-initKey keyseed = initKey128 keySeed
 
 initKey128 :: B.ByteString -> Either String Key
 initKey128 keyseed
