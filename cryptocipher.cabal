@@ -71,10 +71,14 @@ Test-Suite test-cryptocipher
                    , test-framework-quickcheck2 >= 0.2.9 && < 0.3
 
 Executable           Benchmarks
+  hs-source-dirs:    Benchmarks
   Main-Is:           Benchmarks.hs
   if flag(benchmark)
     Buildable:       True
     Build-depends:   base >= 4 && < 5
+                   , bytestring
+                   , crypto-api
+                   , cryptocipher
                    , criterion
                    , mtl
   else
@@ -83,6 +87,9 @@ Executable           Benchmarks
     cpp-options: -DBIG_ENDIAN
   else
     cpp-options: -DLITTLE_ENDIAN
+  if flag(aesni)
+    C-sources:       cbits/aes/x86ni.c
+    CC-options:      -mssse3 -maes
 
 source-repository head
   type:     git

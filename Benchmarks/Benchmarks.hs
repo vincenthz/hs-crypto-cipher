@@ -12,19 +12,30 @@ import Control.Monad.Trans
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as L
 
-import qualified Crypto.Cipher.AES as AES
+import qualified Crypto.Cipher.AES.Haskell as AES
+import qualified Crypto.Cipher.AES.X86NI as AESNI
 import qualified Crypto.Cipher.RC4 as RC4
 import qualified Crypto.Cipher.Camellia as Camellia
+
+import Crypto.Classes
+import qualified Crypto.Modes as CAPI
 
 (Right key128) = AES.initKey128 $ B.replicate 16 0
 aesEncrypt128 = AES.encrypt key128
 aesEncrypt128CBC = AES.encryptCBC key128 (B.replicate 16 0)
+
 (Right key192) = AES.initKey192 $ B.replicate 24 0
 aesEncrypt192 = AES.encrypt key192
 aesEncrypt192CBC = AES.encryptCBC key192 (B.replicate 16 0)
 (Right key256) = AES.initKey256 $ B.replicate 32 0
 aesEncrypt256 = AES.encrypt key256
 aesEncrypt256CBC = AES.encryptCBC key256 (B.replicate 16 0)
+
+(Just capi_key128) = buildKey (B.replicate 16 0) :: Maybe AES.AES128
+aesEncrypt128CBC_capi = fst . CAPI.cbc' capi_key128 CAPI.zeroIV
+
+key128_ni = AESNI.initKey128 $ B.replicate 16 0
+aesniEncrypt128 = AESNI.encrypt key128_ni
 
 (Right camelliaKey128) = Camellia.initKey128 $ B.replicate 16 0
 camelliaEncrypt128 = Camellia.encrypt camelliaKey128
@@ -70,14 +81,18 @@ doOne env (cipherName, f) = do
 main = withConfig defaultConfig $ do
 	env <- measureEnvironment
 	l   <- mapM (doOne env)
-		[ ("RC4"        , rc4Encrypt)
+		{-[ ("RC4"        , rc4Encrypt)
 		, ("Camellia128", camelliaEncrypt128)
-		, ("AES128"     , aesEncrypt128)
-		, ("AES128-CBC" , aesEncrypt128CBC)
+		-} [ ("AES128"     , aesEncrypt128)
+		, ("AES128-ni"  , aesniEncrypt128)
+		--, ("AES128-CBC" , aesEncrypt128CBC)
+		-- , ("AES128-CBC-capi", aesEncrypt128CBC_capi)
+		{-
 		, ("AES192"     , aesEncrypt192)
 		, ("AES192-CBC" , aesEncrypt192CBC)
 		, ("AES256"     , aesEncrypt256)
 		, ("AES256-CBC" , aesEncrypt256CBC)
+        -}
 		]
 	liftIO $ printf "%12s| %12s %12s %12s %12s %12s %12s\n"
 	                "cipher" "16 bytes" "32 bytes" "64 bytes" "512 bytes" "1024 bytes" "4096 bytes"
