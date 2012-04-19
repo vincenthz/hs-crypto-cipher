@@ -208,15 +208,21 @@ vectors_camellia256 =
 
 vectors =
 	[ ("RC4",        vectors_rc4,         encryptStream RC4.initCtx RC4.encrypt)
-	, ("AES128 Enc", vectors_aes128_enc,  encryptBlock aes128InitKey AES.encrypt)
-	, ("AES192 Enc", vectors_aes192_enc,  encryptBlock aes192InitKey AES.encrypt)
-	, ("AES256 Enc", vectors_aes256_enc,  encryptBlock aes256InitKey AES.encrypt)
-	, ("AES128 Dec", vectors_aes128_dec,  encryptBlock aes128InitKey AES.decrypt)
-	, ("AES192 Dec", vectors_aes192_dec,  encryptBlock aes192InitKey AES.decrypt)
-	, ("AES256 Dec", vectors_aes256_dec,  encryptBlock aes256InitKey AES.decrypt)
+	-- AES haskell implementation
+	, ("AES 128 Enc", vectors_aes128_enc,  encryptBlock aes128InitKey AES.encrypt)
+	, ("AES 192 Enc", vectors_aes192_enc,  encryptBlock aes192InitKey AES.encrypt)
+	, ("AES 256 Enc", vectors_aes256_enc,  encryptBlock aes256InitKey AES.encrypt)
+	, ("AES 128 Dec", vectors_aes128_dec,  encryptBlock aes128InitKey AES.decrypt)
+	, ("AES 192 Dec", vectors_aes192_dec,  encryptBlock aes192InitKey AES.decrypt)
+	, ("AES 256 Dec", vectors_aes256_dec,  encryptBlock aes256InitKey AES.decrypt)
+	-- Camellia implementation
 	, ("Camellia",   vectors_camellia128, encryptBlock Camellia.initKey128 Camellia.encrypt)
 	]
 
 katTests = map makeTests vectors
 	where makeTests (name, v, f) = testProperty name (and $ map makeTest v)
-		where makeTest (key,plaintext,expected) = expected == f key plaintext
+		where makeTest (key,plaintext,expected) = assertEq expected $ f key plaintext
+
+assertEq expected got
+	| expected == got = True
+	| otherwise       = error ("expected: " ++ show expected ++ " got: " ++ show got)
