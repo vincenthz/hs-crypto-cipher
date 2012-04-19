@@ -17,6 +17,10 @@ Flag benchmark
   Description:       Build benchmarks
   Default:           False
 
+Flag aesni
+  Description:       Use fast aesni operations that are cpu dependant
+  Default:           False
+
 Library
   Build-Depends:     base >= 4 && < 5
                    , bytestring
@@ -46,6 +50,10 @@ Library
     cpp-options: -DBIG_ENDIAN
   else
     cpp-options: -DLITTLE_ENDIAN
+  if flag(aesni)
+    Exposed-modules:   Crypto.Cipher.AES.X86NI
+    C-sources:       cbits/aes/x86ni.c
+    CC-options:      -mssse3 -maes
 
 Test-Suite test-cryptocipher
   type:              exitcode-stdio-1.0
