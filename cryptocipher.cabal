@@ -67,7 +67,7 @@ Test-Suite test-cryptocipher
                    , vector
                    , entropy
                    , QuickCheck >= 2
-                   , test-framework >= 0.3.3 && < 0.6
+                   , test-framework >= 0.3.3 && < 0.7
                    , test-framework-quickcheck2 >= 0.2.9 && < 0.3
 
 Executable           Benchmarks
