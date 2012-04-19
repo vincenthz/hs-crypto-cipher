@@ -29,6 +29,7 @@ import Number.Prime
 import Number.Serialize
 -}
 -- ciphers/Kexch
+import AES (aesTests)
 import qualified Crypto.Cipher.AES.Haskell as AES
 import qualified Crypto.Cipher.RSA as RSA
 import qualified Crypto.Cipher.DSA as DSA
@@ -301,6 +302,7 @@ tests :: [Test]
 tests =
 	[ symCipherExpectedTests
 	, symCipherMarshallTests
+	, testGroup "AES" aesTests
 	, arithmeticTests
 	, asymEncryptionTests
 	, asymSignatureTests
