@@ -11,6 +11,7 @@ Category:            Cryptography
 Build-Type:          Simple
 Homepage:            http://github.com/vincenthz/hs-cryptocipher
 Cabal-Version:       >=1.8
+Extra-Source-Files:  Tests/*.hs
 
 Flag benchmark
   Description:       Build benchmarks
