@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 import Criterion
 import Criterion.Environment
 import Criterion.Config
