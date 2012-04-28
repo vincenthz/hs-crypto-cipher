@@ -44,12 +44,15 @@ instance Show Monomial where
 instance Show Polynomial where
 	show (Polynomial p) = intercalate "+" $ map show $ V.toList p
 
+toList :: Polynomial -> [Monomial]
 toList (Polynomial p) = V.toList p
 
+fromList :: [Monomial] -> Polynomial
 fromList = Polynomial . V.fromList . reverse . sort . filterZero
 	where
 		filterZero = filter (\(Monomial _ v) -> v /= 0)
 
+getWeight :: Polynomial -> Int -> Maybe Integer
 getWeight (Polynomial p) n = look 0
 	where
 		plen = V.length p
@@ -63,6 +66,7 @@ getWeight (Polynomial p) n = look 0
 					GT -> look (i+1)
 		
 
+mergePoly :: (Integer -> Integer -> Integer) -> Polynomial -> Polynomial -> Polynomial
 mergePoly f (Polynomial p1) (Polynomial p2) = fromList $ loop 0 0
 	where
 		l1 = V.length p1
@@ -74,18 +78,23 @@ mergePoly f (Polynomial p1) (Polynomial p2) = fromList $ loop 0 0
 			| otherwise            =
 				let (coef, i1inc, i2inc) = addCoef (p1 ! i1) (p2 ! i2) in
 				coef : loop (i1+i1inc) (i2+i2inc)
-		addCoef m1@(Monomial w1 v1) m2@(Monomial w2 v2) =
+		addCoef m1@(Monomial w1 v1) (Monomial w2 v2) =
 			case compare w1 w2 of
 				LT -> (Monomial w2 (f 0 v2), 0, 1)
 				EQ -> (Monomial w1 (f v1 v2), 1, 1)
 				GT -> (m1, 1, 0)
 
+addPoly :: Polynomial -> Polynomial -> Polynomial
 addPoly = mergePoly (+)
+
+subPoly :: Polynomial -> Polynomial -> Polynomial
 subPoly = mergePoly (-)
 
+negPoly :: Polynomial -> Polynomial
 negPoly (Polynomial p) = Polynomial $ V.map negateMonomial p
 	where negateMonomial (Monomial w v) = Monomial w (-v)
 
+mulPoly :: Polynomial -> Polynomial -> Polynomial
 mulPoly p1@(Polynomial v1) p2@(Polynomial v2) =
 	fromList $ filter (\(Monomial _ v) -> v /= 0) $ map (\i -> Monomial i (c i)) $ reverse [0..(m+n)]
 	where
@@ -96,9 +105,11 @@ mulPoly p1@(Polynomial v1) p2@(Polynomial v2) =
 				a = maybe 0 id . getWeight p1
 				b = maybe 0 id . getWeight p2
 
+squarePoly :: Polynomial -> Polynomial
 squarePoly p = p `mulPoly` p
 
-expPoly p e = loop e
+expPoly :: Polynomial -> Integer -> Polynomial
+expPoly p e = loop p e
 	where
 		loop t 0 = t
 		loop t n = loop (squarePoly t) (n-1)
