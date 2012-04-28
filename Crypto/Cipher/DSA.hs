@@ -19,7 +19,7 @@ module Crypto.Cipher.DSA
 import Crypto.Random
 import Data.Maybe
 import Data.ByteString (ByteString)
-import Number.ModArithmetic (exponantiation_rtl_binary, inverse)
+import Number.ModArithmetic (exponantiation, inverse)
 import Number.Serialize
 import Number.Generate
 import Crypto.Types.PubKey.DSA
@@ -64,4 +64,4 @@ verify (r,s) hash pk m
 		v       = ((expmod g u1 p) * (expmod y u2 p)) `mod` p `mod` q
 
 expmod :: Integer -> Integer -> Integer -> Integer
-expmod = exponantiation_rtl_binary
+expmod = exponantiation

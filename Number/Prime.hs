@@ -22,7 +22,7 @@ import Crypto.Random
 import Data.Bits
 import Number.Generate
 import Number.Basic (sqrti, gcde_binary)
-import Number.ModArithmetic (exponantiation_rtl_binary)
+import Number.ModArithmetic (exponantiation)
 
 -- | returns if the number is probably prime.
 -- first a list of small primes are implicitely tested for divisibility,
@@ -82,7 +82,7 @@ primalityTestMillerRabin rng tries !n
 		factorise !s !v
 			| v `testBit` 0 = (s, v)
 			| otherwise     = factorise (s+1) (v `shiftR` 1)
-		expmod = exponantiation_rtl_binary
+		expmod = exponantiation
 		-- when iteration reach zero, we have a probable prime
 		loop g _       0 = Right (True, g)
 		loop g t@(_,d) k = case generateBetween g 2 (n-2) of
@@ -108,7 +108,7 @@ primalityTestFermat :: Int -- ^ number of iterations of the algorithm
                     -> Bool
 primalityTestFermat n a p = and $ map expTest [a..(a+fromIntegral n)]
     where !pm1 = p-1
-          expTest i = exponantiation_rtl_binary i pm1 p == 1
+          expTest i = exponantiation i pm1 p == 1
 
 -- | Test naively is integer is prime.
 -- while naive, we skip even number and stop iteration at i > sqrt(n)
