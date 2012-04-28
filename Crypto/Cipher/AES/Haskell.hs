@@ -50,7 +50,7 @@ import Control.Monad.Primitive
 
 import Data.Primitive.ByteArray
 
-import System.Endian (littleEndian)
+import System.Endian (getSystemEndianness, Endianness(..))
 
 newtype AES128 = A128 { unA128 :: Key }
 newtype AES192 = A192 { unA192 :: Key }
@@ -474,10 +474,10 @@ sbox4 (W8# w) = W32# (indexWord32OffAddr# table (word2Int# w))
 	where !(Table table) = sbox4Tab
 
 sbox1Tab, sbox2Tab, sbox3Tab, sbox4Tab :: Table
-sbox1Tab = if littleEndian then sbox_x000 else sbox_000x
-sbox2Tab = if littleEndian then sbox_0x00 else sbox_00x0
-sbox3Tab = if littleEndian then sbox_00x0 else sbox_0x00
-sbox4Tab = if littleEndian then sbox_000x else sbox_x000
+sbox1Tab = if getSystemEndianness == LittleEndian then sbox_x000 else sbox_000x
+sbox2Tab = if getSystemEndianness == LittleEndian then sbox_0x00 else sbox_00x0
+sbox3Tab = if getSystemEndianness == LittleEndian then sbox_00x0 else sbox_0x00
+sbox4Tab = if getSystemEndianness == LittleEndian then sbox_000x else sbox_x000
 
 data Table = Table !Addr#
 

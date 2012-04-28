@@ -25,6 +25,7 @@ Library
   Build-Depends:     base >= 4 && < 5
                    , bytestring
                    , vector >= 0.7
+                   , cpu >= 0.1 && < 0.2
                    , ghc-prim
                    , primitive
                    , crypto-api >= 0.5
@@ -44,12 +45,7 @@ Library
                      Number.Basic
                      Number.Polynomial
                      Number.Prime
-                     System.Endian
   ghc-options:       -Wall
-  if arch(ppc) || arch(sparc)
-    cpp-options: -DBIG_ENDIAN
-  else
-    cpp-options: -DLITTLE_ENDIAN
   if flag(aesni)
     Exposed-modules:   Crypto.Cipher.AES.X86NI
     C-sources:       cbits/aes/x86ni.c
@@ -83,10 +79,6 @@ Executable           Benchmarks
                    , mtl
   else
     Buildable:       False
-  if arch(ppc) || arch(sparc)
-    cpp-options: -DBIG_ENDIAN
-  else
-    cpp-options: -DLITTLE_ENDIAN
   if flag(aesni)
     C-sources:       cbits/aes/x86ni.c
     CC-options:      -mssse3 -maes
