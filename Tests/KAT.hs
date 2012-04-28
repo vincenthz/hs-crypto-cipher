@@ -1,5 +1,10 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, CPP #-}
 module KAT (katTests) where
+
+-- unfortunately due to a bug in some version of cabal
+-- there's no way to have a condition cpp-options in the cabal file
+-- for test suite. to run test with AESni, uncomment the following
+-- #define HAVE_AESNI
 
 import Test.Framework.Providers.QuickCheck2 (testProperty)
 import qualified Data.ByteString as B
@@ -8,7 +13,9 @@ import qualified Data.ByteString.Char8 as BC
 import Data.Word
 
 import qualified Crypto.Cipher.AES.Haskell as AES
+#ifdef HAVE_AESNI
 import qualified Crypto.Cipher.AES.X86NI as AESNI
+#endif
 import qualified Crypto.Cipher.Camellia as Camellia
 import qualified Crypto.Cipher.RC4 as RC4
 
@@ -216,9 +223,11 @@ vectors =
 	, ("AES 128 Dec", vectors_aes128_dec,  encryptBlock aes128InitKey AES.decrypt)
 	, ("AES 192 Dec", vectors_aes192_dec,  encryptBlock aes192InitKey AES.decrypt)
 	, ("AES 256 Dec", vectors_aes256_dec,  encryptBlock aes256InitKey AES.decrypt)
+#ifdef HAVE_AESNI
 	-- AES ni implementation
 	, ("AESNI 128 Enc", vectors_aes128_enc,  encryptBlock (Right . AESNI.initKey128) AESNI.encrypt)
 	, ("AESNI 128 Dec", vectors_aes128_dec,  encryptBlock (Right . AESNI.initKey128) AESNI.decrypt)
+#endif
 	-- Camellia implementation
 	, ("Camellia",   vectors_camellia128, encryptBlock Camellia.initKey128 Camellia.encrypt)
 	]

@@ -1,7 +1,15 @@
+{-# LANGUAGE CPP #-}
 module AES (aesTests) where
 
+-- unfortunately due to a bug in some version of cabal
+-- there's no way to have a condition cpp-options in the cabal file
+-- for test suite. to run test with AESni, uncomment the following
+-- #define HAVE_AESNI
+
 import qualified Crypto.Cipher.AES.Haskell as AESHs
+#ifdef HAVE_AESNI
 import qualified Crypto.Cipher.AES.X86NI as AESNI
+#endif
 
 import Crypto.Classes
 import qualified Crypto.Modes as CAPI
@@ -42,18 +50,26 @@ unright (Left e) = error e
 aesTests =
     [ testProperty "ECB Encryption Equivalent" $ ebcTests
         [ (\k m -> AESHs.encrypt (unright $ AESHs.initKey128 k) m)
+#ifdef HAVE_AESNI
         , (\k m -> AESNI.encrypt (AESNI.initKey128 k) m)
+#endif
         ]
     , testProperty "CBC Encryption Equivalent" $ cbcTests
         [ (\k iv m -> AESHs.encryptCBC (unright $ AESHs.initKey128 k) iv m)
+#ifdef HAVE_AESNI
         , (\k iv m -> AESNI.encryptCBC (AESNI.initKey128 k) iv m)
+#endif
         ]
     , testProperty "ECB Decryption Equivalent" $ ebcTests
         [ (\k m -> AESHs.decrypt (unright $ AESHs.initKey128 k) m)
+#ifdef HAVE_AESNI
         , (\k m -> AESNI.decrypt (AESNI.initKey128 k) m)
+#endif
         ]
     , testProperty "CBC Decryption Equivalent" $ cbcTests
         [ (\k iv m -> AESHs.decryptCBC (unright $ AESHs.initKey128 k) iv m)
+#ifdef HAVE_AESNI
         , (\k iv m -> AESNI.decryptCBC (AESNI.initKey128 k) iv m)
+#endif
         ]
     ]
