@@ -25,7 +25,7 @@ import Crypto.Random
 import Crypto.Types.PubKey.RSA
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
-import Number.ModArithmetic (exponantiation_rtl_binary, inverse)
+import Number.ModArithmetic (exponantiation, inverse)
 import Number.Prime (generatePrime)
 import Number.Serialize
 import Data.Maybe (fromJust)
@@ -178,4 +178,4 @@ i2ospOf len m
 		bytes    = i2osp m
 
 expmod :: Integer -> Integer -> Integer -> Integer
-expmod = exponantiation_rtl_binary
+expmod = exponantiation

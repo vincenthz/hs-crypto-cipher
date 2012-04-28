@@ -8,6 +8,7 @@
 
 module Number.ModArithmetic
 	( exponantiation_rtl_binary
+	, exponantiation
 	, inverse
 	) where
 
@@ -27,6 +28,16 @@ exponantiation_rtl_binary b e m = loop e b 1
 		sq x          = (x * x) `mod` m
 		loop !0 _  !a = a `mod` m
 		loop !i !s !a = loop (i `shiftR` 1) (sq s) (if odd i then a * s else a)
+
+-- | exponantiation computes modular exponantiation as b^e mod m
+-- using repetitive squaring.
+exponantiation :: Integer -> Integer -> Integer -> Integer
+exponantiation b e m
+             | e == 0    = 1
+             | e == 1    = b `mod` m
+             | even e    = let p = (exponantiation b (e `div` 2) m) `mod` m
+                           in  (p^(2::Integer)) `mod` m
+             | otherwise = (b * exponantiation b (e-1) m) `mod` m
 
 -- | inverse computes the modular inverse as in g^(-1) mod m
 inverse :: Integer -> Integer -> Maybe Integer
