@@ -12,6 +12,7 @@ Build-Type:          Simple
 Homepage:            http://github.com/vincenthz/hs-cryptocipher
 Cabal-Version:       >=1.8
 Extra-Source-Files:  Tests/*.hs
+                     cbits/aes/aes.h
 
 Flag benchmark
   Description:       Build benchmarks
@@ -50,7 +51,6 @@ Library
     cpp-options:     -DHAVE_AESNI
     Exposed-modules: Crypto.Cipher.AES.X86NI
     C-sources:       cbits/aes/x86ni.c
-    extra-source-files: cbits/aes/aes.h
     CC-options:      -mssse3 -maes
 
 Test-Suite test-cryptocipher
