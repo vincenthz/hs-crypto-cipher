@@ -46,6 +46,7 @@ Library
                      Number.Basic
                      Number.Polynomial
                      Number.Prime
+                     Crypto.Cipher.ElGamal
   ghc-options:       -Wall
   if flag(aesni)
     cpp-options:     -DHAVE_AESNI
