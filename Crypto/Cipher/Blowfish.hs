@@ -9,7 +9,7 @@
 -- based on: BlowfishAux.hs (C) 2002 HardCore SoftWare, Doug Hoyte
 --           (as found in Crypto-4.2.4)
 
-module Crypto.Cipher.Blowfish (Blowfish) where
+module Crypto.Cipher.Blowfish (Blowfish, encrypt, decrypt) where
 
 import Crypto.Classes
 import Data.Vector (Vector, (!), (//))
@@ -37,9 +37,14 @@ data Blowfish = Blowfish { bfKey :: Key
 data BlowfishState = BF Pbox Sbox Sbox Sbox Sbox
 type Key = B.ByteString
 
+-- TODO Error handling.
+encrypt, decrypt :: Key -> B.ByteString -> B.ByteString
+encrypt = cipher . selectEncrypt . bfState . fromJust . initState
+decrypt = cipher . selectEncrypt . bfState . fromJust . initState
+
 instance Serialize Blowfish where
     put = put . bfKey
-    get = fmap initKey get >>= \x -> case x of
+    get = fmap initState get >>= \x -> case x of
             Just k -> return k
             Nothing -> fail "unable to deserialize key"
 
@@ -47,25 +52,23 @@ instance BlockCipher Blowfish where
 	blockSize    = Tagged 64
 	encryptBlock = cipher . selectEncrypt . bfState
 	decryptBlock = cipher . selectDecrypt . bfState
-	buildKey b   = initKey b
-	keyLength    = Tagged 128
+	buildKey b   = initState b
+	keyLength    = Tagged 448 -- Actually 1 through 448 inclusive.
 
 selectEncrypt, selectDecrypt :: BlowfishState -> (Pbox, BlowfishState)
 selectEncrypt x@(BF p _ _ _ _) = (p, x)
-selectDecrypt x@(BF p _ _ _ _) = (revP p, x)
-
-revP :: Pbox -> Pbox
-revP x = x//[(i, x ! (17-i)) | i <- [0..17]]
+selectDecrypt x@(BF p _ _ _ _) = (V.reverse p, x)
 
 cipher :: (Pbox, BlowfishState) -> B.ByteString -> B.ByteString
 cipher (p, bs) b
     | B.length b `mod` 8 /= 0 = error "invalid data length"
     | otherwise = B.concat $ doChunks 8 (fromW32Pair . bfEnc p bs . toW32Pair) b
 
-initKey :: B.ByteString -> Maybe Blowfish
-initKey b
-    | B.length b /= 16 = fail "invalid key length"
-    | otherwise        = return (mkState b)
+-- TODO Properly restrict key size.
+initState :: B.ByteString -> Maybe Blowfish
+initState b
+    | B.length b > 56 = fail "invalid key length"
+    | otherwise       = return (mkState b)
 
 mkState :: Key -> Blowfish
 mkState k = let (BF p s0 s1 s2 s3) = bfMakeKey . B.unpack $ k
