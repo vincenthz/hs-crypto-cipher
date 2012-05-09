@@ -16,6 +16,7 @@ import qualified Crypto.Cipher.AES.Haskell as AES
 #ifdef HAVE_AESNI
 import qualified Crypto.Cipher.AES.X86NI as AESNI
 #endif
+import qualified Crypto.Cipher.Blowfish as Blowfish
 import qualified Crypto.Cipher.Camellia as Camellia
 import qualified Crypto.Cipher.RC4 as RC4
 
@@ -214,6 +215,18 @@ vectors_camellia256 =
 	  )
 	]
 
+vectors_blowfish =
+    [
+      ( replicate 8 0
+      , B.replicate 8 0
+      , [0x4e,0xf9,0x97,0x45,0x61,0x98,0xDD,0x78]
+      )
+    , ( replicate 8 255
+      , B.replicate 8 255
+      , [0x51,0x86,0x6F,0xD5,0xB8,0x5E,0xCB,0x8A]
+      )
+    ]
+
 vectors =
 	[ ("RC4",        vectors_rc4,         encryptStream RC4.initCtx RC4.encrypt)
 	-- AES haskell implementation
@@ -228,6 +241,8 @@ vectors =
 	, ("AESNI 128 Enc", vectors_aes128_enc,  encryptBlock (Right . AESNI.initKey128) AESNI.encrypt)
 	, ("AESNI 128 Dec", vectors_aes128_dec,  encryptBlock (Right . AESNI.initKey128) AESNI.decrypt)
 #endif
+    -- Blowfish implementation
+    , ("Blowfish",   vectors_blowfish,    encryptBlock Right Blowfish.encrypt)
 	-- Camellia implementation
 	, ("Camellia",   vectors_camellia128, encryptBlock Camellia.initKey128 Camellia.encrypt)
 	]

@@ -36,6 +36,7 @@ Library
   Exposed-modules:   Crypto.Cipher.RC4
                      Crypto.Cipher.AES
                      Crypto.Cipher.AES.Haskell
+                     Crypto.Cipher.Blowfish
                      Crypto.Cipher.Camellia
                      Crypto.Cipher.RSA
                      Crypto.Cipher.DSA
