@@ -242,7 +242,7 @@ vectors =
 	, ("AESNI 128 Dec", vectors_aes128_dec,  encryptBlock (Right . AESNI.initKey128) AESNI.decrypt)
 #endif
     -- Blowfish implementation
-    , ("Blowfish",   vectors_blowfish,    encryptBlock Right Blowfish.encrypt)
+    , ("Blowfish",   vectors_blowfish,    encryptBlock Blowfish.initKey Blowfish.encrypt)
 	-- Camellia implementation
 	, ("Camellia",   vectors_camellia128, encryptBlock Camellia.initKey128 Camellia.encrypt)
 	]

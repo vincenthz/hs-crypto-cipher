@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP, MagicHash #-}
 -- |
 -- Module      : Crypto.Cipher.Blowfish
 -- License     : BSD-style
@@ -9,24 +8,16 @@
 -- based on: BlowfishAux.hs (C) 2002 HardCore SoftWare, Doug Hoyte
 --           (as found in Crypto-4.2.4)
 
-module Crypto.Cipher.Blowfish (Blowfish, encrypt, decrypt) where
+module Crypto.Cipher.Blowfish (Blowfish, Key, initKey, encrypt, decrypt) where
 
 import Crypto.Classes
 import Data.Vector (Vector, (!), (//))
 import qualified Data.Vector as V
 import Data.Bits
 import Data.Word
-import Data.Char
 import qualified Data.ByteString as B
 import Data.Tagged
 import Data.Serialize
-import Data.Maybe
-
-#if defined(__GLASGOW_HASKELL__) && !defined(__HADDOCK__)
-import GHC.Base
-import GHC.Word
-import GHC.Int
-#endif
 
 type Pbox = Vector Word32
 type Sbox = Vector Word32
@@ -35,24 +26,30 @@ data Blowfish = Blowfish { bfKey :: Key
                          , bfState :: BlowfishState
                          }
 data BlowfishState = BF Pbox Sbox Sbox Sbox Sbox
-type Key = B.ByteString
+data Key = Key { unKey :: Vector Word32 }
+    deriving (Eq, Show)
 
--- TODO Error handling.
 encrypt, decrypt :: Key -> B.ByteString -> B.ByteString
-encrypt = cipher . selectEncrypt . bfState . fromJust . initState
-decrypt = cipher . selectEncrypt . bfState . fromJust . initState
+encrypt = cipher . selectEncrypt . bfState . initBoxes
+decrypt = cipher . selectEncrypt . bfState . initBoxes
 
 instance Serialize Blowfish where
     put = put . bfKey
-    get = fmap initState get >>= \x -> case x of
-            Just k -> return k
-            Nothing -> fail "unable to deserialize key"
+    get = fmap initBoxes get
+
+instance Serialize Key where
+    put = putByteString . keyToByteString
+    get = do
+        bs <- getByteString (18 * 4)
+        case keyFromByteString bs of
+            Right k -> return k
+            Left _ -> fail "Invalid raw key material."
 
 instance BlockCipher Blowfish where
 	blockSize    = Tagged 64
 	encryptBlock = cipher . selectEncrypt . bfState
 	decryptBlock = cipher . selectDecrypt . bfState
-	buildKey b   = initState b
+	buildKey     = either (const Nothing) (Just . initBoxes) . initKey
 	keyLength    = Tagged 448 -- Actually 1 through 448 inclusive.
 
 selectEncrypt, selectDecrypt :: BlowfishState -> (Pbox, BlowfishState)
@@ -64,21 +61,45 @@ cipher (p, bs) b
     | B.length b `mod` 8 /= 0 = error "invalid data length"
     | otherwise = B.concat $ doChunks 8 (fromW32Pair . bfEnc p bs . toW32Pair) b
 
--- TODO Properly restrict key size.
-initState :: B.ByteString -> Maybe Blowfish
-initState b
-    | B.length b > 56 = fail "invalid key length"
-    | otherwise       = return (mkState b)
+initBoxes :: Key -> Blowfish
+initBoxes k = let (BF p s0 s1 s2 s3) = bfMakeKey k
+              in Blowfish k (BF p s0 s1 s2 s3)
 
-mkState :: Key -> Blowfish
-mkState k = let (BF p s0 s1 s2 s3) = bfMakeKey . B.unpack $ k
-            in Blowfish k (BF p s0 s1 s2 s3)
+initKey :: B.ByteString -> Either String Key
+initKey b
+    | B.length b > (448 `div` 8) = fail "key too large"
+    | B.length b == 0 = keyFromByteString (B.replicate (18*4) 0)
+    | otherwise = keyFromByteString . B.pack . take (18*4) . cycle . B.unpack $ b
+
+keyFromByteString :: B.ByteString -> Either String Key
+keyFromByteString k
+    | B.length k /= (18 * 4) = fail "Incorrect expanded key length."
+    | otherwise = return . Key . (\ws -> V.generate 18 (ws!!)) . w8tow32 . B.unpack $ k
+  where        
+    w8tow32 :: [Word8] -> [Word32]
+    w8tow32 [] = []
+    w8tow32 (a:b:c:d:xs) = ( (fromIntegral a) .|.
+                             (fromIntegral b `shiftL`  8) .|.
+                             (fromIntegral c `shiftL` 16) .|.
+                             (fromIntegral d `shiftL` 24) ) : w8tow32 xs
+    w8tow32 _ = error $ "internal error: Crypto.Cipher.Blowfish:keyFromByteString"
+
+keyToByteString :: Key -> B.ByteString
+keyToByteString = B.pack . w32tow8 . (\x -> map (x!) [0..17]) . unKey
+  where
+    w32tow8 :: [Word32] -> [Word8]
+    w32tow8 = map fromIntegral . concat . map f
+    f w = [ w .&. 0xff
+          , (w `shiftR` 8) .&. 0xff
+          , (w `shiftR` 16) .&. 0xff
+          , (w `shiftR` 24) .&. 0xff
+          ]
 
 bfEnc :: Pbox -> BlowfishState -> (Word32, Word32) -> (Word32, Word32)
-bfEnc p a b = aux p a b 0
+bfEnc x y z = aux x y z 0
   where
     aux :: Pbox -> BlowfishState -> (Word32, Word32) -> Int -> (Word32, Word32)
-    aux p bs@(BF _ s0 s1 s2 s3) (l,r) 16 = (r `xor` p!17, l `xor` p!16)
+    aux p _                     (l,r) 16 = (r `xor` p!17, l `xor` p!16)
     aux p bs@(BF _ s0 s1 s2 s3) (l,r) i = aux p bs (newr,newl) (i+1)
       where newl = l `xor` (p ! i)
             newr = r `xor` (f newl)
@@ -89,29 +110,11 @@ bfEnc p a b = aux p a b 0
                     c = fromIntegral ((t `shiftL` 16) `shiftR` 24)
                     d = fromIntegral ((t `shiftL` 24) `shiftR` 24)
 
-
-bfMakeKey   :: [Word8] -> BlowfishState
-bfMakeKey [] = procKey (0,0) (BF iPbox iSbox0 iSbox1 iSbox2 iSbox3) 0
-bfMakeKey k  = procKey (0,0) (BF (string2Pbox k) iSbox0 iSbox1 iSbox2 iSbox3) 0
-
-
-string2Pbox  :: [Word8] -> Pbox
-string2Pbox k = V.generate 18 (xtext!!)
-  where xtext = zipWith (xor)
-                        (compress4 (doShift (makeTo72 (charsToWord32s k) 0) 0))
-                        [iPbox ! (fromIntegral i) | i <- [0..17]]
-        charsToWord32s []     = []
-        charsToWord32s (k:ks) = (fromIntegral k) : charsToWord32s ks
-        makeTo72 k 72 = []
-        makeTo72 k  i = k!!(i `mod` (length k)) : makeTo72 k (i+1)
-        doShift [] i     = []
-        doShift (w:ws) i = w `shiftL` (8*(3 - (i `mod` 4))) : doShift ws (i+1)
-        compress4 []            = []
-        compress4 (a:b:c:d:etc) = (a .|. b .|. c .|. d) : compress4 etc
-
+bfMakeKey :: Key -> BlowfishState
+bfMakeKey (Key k) = procKey (0,0) (BF (V.zipWith xor k iPbox) iSbox0 iSbox1 iSbox2 iSbox3) 0
 
 procKey :: (Word32, Word32) -> BlowfishState -> Int -> BlowfishState
-procKey (l,r) tpbf@(BF p s0 s1 s2 s3) 1042 = tpbf
+procKey _     tpbf                    1042 = tpbf
 procKey (l,r) tpbf@(BF p s0 s1 s2 s3)    i = procKey (nl,nr) (newbf i) (i+2)
   where (nl,nr) = bfEnc p tpbf (l,r)
         newbf x | x <   18 = (BF (p//[(x,nl),(x+1,nr)]) s0 s1 s2 s3)
