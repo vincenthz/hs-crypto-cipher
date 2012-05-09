@@ -18,6 +18,7 @@ import qualified Crypto.Cipher.AES.Haskell as AES
 import qualified Crypto.Cipher.AES.X86NI as AESNI
 #endif
 import qualified Crypto.Cipher.RC4 as RC4
+import qualified Crypto.Cipher.Blowfish as Blowfish
 import qualified Crypto.Cipher.Camellia as Camellia
 
 import Crypto.Classes
@@ -43,6 +44,9 @@ aesniEncrypt128 = AESNI.encrypt key128_ni
 
 aesniEncrypt128CBC = AESNI.encryptCBC key128_ni (B.replicate 16 0)
 #endif
+
+(Right blowfishKey) = Blowfish.initKey $ B.empty
+blowfishEncrypt = Blowfish.encrypt blowfishKey
 
 (Right camelliaKey128) = Camellia.initKey128 $ B.replicate 16 0
 camelliaEncrypt128 = Camellia.encrypt camelliaKey128
@@ -89,6 +93,7 @@ main = withConfig defaultConfig $ do
 	env <- measureEnvironment
 	l   <- mapM (doOne env)
 		[ ("RC4"        , rc4Encrypt)
+        , ("Blowfish"   , blowfishEncrypt)
 		, ("Camellia128", camelliaEncrypt128)
 		, ("AES128"     , aesEncrypt128)
 		, ("AES128-CBC" , aesEncrypt128CBC)
