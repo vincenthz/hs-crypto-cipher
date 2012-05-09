@@ -1,46 +1,81 @@
--- BlowfishAux.hs (C) 2002 HardCore SoftWare, Doug Hoyte
---
--- Doug has kindly agreed to release this under BSD.
---
--- Haskell implementation of Bruce Schneier's blowfish encryption algorithm.
--- This implementation uses 16 rounds and produces the same ciphertext as
--- the OpenBSD and Paul Kocher 16-round implementations.
---
--- The function bfMakeKey should be passed a list of Chars. These represent
--- the key. It will return a datatype called "BF", which contains the
--- initialized key information.
---
--- The function bfEnc is passed a BF datatype representing the key and a
--- list of 2 Word32s (the plaintext). It returns a list of 2 Word32s
--- (the ciphertext).
---
--- The function bfDec is passed a BF datatype representing the key and a list
--- of 2 Word32s (the ciphertext) and a BF datatype representing the key. It
--- returns a list of 2 Word32s (the plaintext).
+{-# LANGUAGE CPP, MagicHash #-}
+-- |
+-- Module      : Crypto.Cipher.Blowfish
+-- License     : BSD-style
+-- Stability   : experimental
+-- Portability : Good
 
-module Crypto.Cipher.Blowfish
-   (bfMakeKey,
-    bfEnc,
-    bfDec) where
+-- Crypto.Cipher.Blowfish, copyright (c) 2012 Stijn van Drongelen
+-- based on: BlowfishAux.hs (C) 2002 HardCore SoftWare, Doug Hoyte
+--           (as found in Crypto-4.2.4)
 
+module Crypto.Cipher.Blowfish (Blowfish) where
+
+import Crypto.Classes
 import Data.Array
 import Data.Bits
 import Data.Word
 import Data.Char
+import qualified Data.ByteString as B
+import Data.Tagged
+import Data.Serialize
+import Data.Maybe
+
+#if defined(__GLASGOW_HASKELL__) && !defined(__HADDOCK__)
+import GHC.Base
+import GHC.Word
+import GHC.Int
+#endif
 
 type Pbox = Array Word32 Word32
 type Sbox = Array Word32 Word32
 
-data BF = BF Pbox Sbox Sbox Sbox Sbox
+data Blowfish = Blowfish { bfKey :: Key
+                         , bfState :: BlowfishState
+                         }
+data BlowfishState = BF Pbox Sbox Sbox Sbox Sbox
+type Key = B.ByteString
 
+instance Serialize Blowfish where
+    put = put . bfKey
+    get = fmap initKey get >>= \x -> case x of
+            Just k -> return k
+            Nothing -> fail "unable to deserialize key"
 
+instance BlockCipher Blowfish where
+	blockSize    = Tagged 64
+	encryptBlock = cipher . selectEncrypt . bfState
+	decryptBlock = cipher . selectDecrypt . bfState
+	buildKey b   = initKey b
+	keyLength    = Tagged 128
 
-bfEnc :: BF -> [Word32] -> [Word32]
-bfEnc a b = aux a b 0
+selectEncrypt, selectDecrypt :: BlowfishState -> (Pbox, BlowfishState)
+selectEncrypt x@(BF p _ _ _ _) = (p, x)
+selectDecrypt x@(BF p _ _ _ _) = (revP p, x)
+
+revP :: Pbox -> Pbox
+revP x = x//[(i, x ! (17-i)) | i <- [0..17]]
+
+cipher :: (Pbox, BlowfishState) -> B.ByteString -> B.ByteString
+cipher (p, bs) b
+    | B.length b `mod` 8 /= 0 = error "invalid data length"
+    | otherwise = B.concat $ doChunks 8 (fromW32Pair . bfEnc p bs . toW32Pair) b
+
+initKey :: B.ByteString -> Maybe Blowfish
+initKey b
+    | B.length b /= 16 = fail "invalid key length"
+    | otherwise        = return (mkState b)
+
+mkState :: Key -> Blowfish
+mkState k = let (BF p s0 s1 s2 s3) = bfMakeKey . B.unpack $ k
+            in Blowfish k (BF p s0 s1 s2 s3)
+
+bfEnc :: Pbox -> BlowfishState -> [Word32] -> [Word32]
+bfEnc p a b = aux p a b 0
   where
-    aux :: BF -> [Word32] -> Word32 -> [Word32]
-    aux bs@(BF p s0 s1 s2 s3) (l:r:[]) 16 = (r `xor` p!17):(l `xor` p!16):[]
-    aux bs@(BF p s0 s1 s2 s3) (l:r:[]) i = aux bs (newr:newl:[]) (i+1)
+    aux :: Pbox -> BlowfishState -> [Word32] -> Word32 -> [Word32]
+    aux p bs@(BF _ s0 s1 s2 s3) (l:r:[]) 16 = (r `xor` p!17):(l `xor` p!16):[]
+    aux p bs@(BF _ s0 s1 s2 s3) (l:r:[]) i = aux p bs (newr:newl:[]) (i+1)
       where newl = l `xor` (p ! i)
             newr = r `xor` (f newl)
             f   :: Word32 -> Word32
@@ -51,24 +86,18 @@ bfEnc a b = aux a b 0
                     d =  ((t `shiftL` 24) `shiftR` 24)
 
 
-bfDec :: BF -> [Word32] -> [Word32]
-bfDec (BF p s0 s1 s2 s3) a = bfEnc (BF (revP p) s0 s1 s2 s3) a
-    where revP  :: Pbox -> Pbox
-          revP x = x//[(i, x ! (17-i)) | i <- [0..17]]
-
-
-bfMakeKey   :: [Char] -> BF
+bfMakeKey   :: [Word8] -> BlowfishState
 bfMakeKey [] = procKey [0,0] (BF iPbox iSbox0 iSbox1 iSbox2 iSbox3) 0
 bfMakeKey k  = procKey [0,0] (BF (string2Pbox k) iSbox0 iSbox1 iSbox2 iSbox3) 0
 
 
-string2Pbox  :: [Char] -> Pbox
+string2Pbox  :: [Word8] -> Pbox
 string2Pbox k = array (0,17) [(fromIntegral i,xtext!!i) | i <- [0..17]]
   where xtext = zipWith (xor)
                         (compress4 (doShift (makeTo72 (charsToWord32s k) 0) 0))
                         [iPbox ! (fromIntegral i) | i <- [0..17]]
         charsToWord32s []     = []
-        charsToWord32s (k:ks) = (fromIntegral $ fromEnum k) : charsToWord32s ks
+        charsToWord32s (k:ks) = (fromIntegral k) : charsToWord32s ks
         makeTo72 k 72 = []
         makeTo72 k  i = k!!(i `mod` (length k)) : makeTo72 k (i+1)
         doShift [] i     = []
@@ -77,10 +106,10 @@ string2Pbox k = array (0,17) [(fromIntegral i,xtext!!i) | i <- [0..17]]
         compress4 (a:b:c:d:etc) = (a .|. b .|. c .|. d) : compress4 etc
 
 
-procKey :: [Word32] -> BF -> Word32 -> BF
+procKey :: [Word32] -> BlowfishState -> Word32 -> BlowfishState
 procKey (l:r:[]) tpbf@(BF p s0 s1 s2 s3) 1042 = tpbf
 procKey (l:r:[]) tpbf@(BF p s0 s1 s2 s3)    i = procKey [nl,nr] (newbf i) (i+2)
-  where [nl,nr] = bfEnc tpbf [l,r]
+  where [nl,nr] = bfEnc p tpbf [l,r]
         newbf x | x <   18 = (BF (p//[(x,nl),(x+1,nr)]) s0 s1 s2 s3)
                 | x <  274 = (BF p (s0//[(x-18,nl),(x-17,nr)]) s1 s2 s3)
                 | x <  530 = (BF p s0 (s1//[(x-274,nl),(x-273,nr)]) s2 s3)
@@ -88,6 +117,44 @@ procKey (l:r:[]) tpbf@(BF p s0 s1 s2 s3)    i = procKey [nl,nr] (newbf i) (i+2)
                 | x < 1042 = (BF p s0 s1 s2 (s3//[(x-786,nl),(x-785,nr)]))
 
 
+doChunks :: Int -> (B.ByteString -> B.ByteString) -> B.ByteString -> [B.ByteString]
+doChunks n f b =
+	let (x, rest) = B.splitAt n b in
+	if B.length rest >= n
+		then f x : doChunks n f rest
+		else [ f x ]
+
+toW32Pair :: B.ByteString -> [Word32]
+toW32Pair b = let (x1, x2) = B.splitAt 4 b
+                  w1 = decode32be x1
+                  w2 = decode32be x2
+              in [w1,w2]
+
+fromW32Pair :: [Word32] -> B.ByteString
+fromW32Pair (w1:w2:[])
+    = let w1' = fromIntegral w1
+          w2' = fromIntegral w2
+          w = (w1' `shiftL` 32) .|. w2'
+      in encode64be w
+
+decode32be :: B.ByteString -> Word32
+decode32be s = id $!
+    (fromIntegral (s `B.index` 0) `shiftL` 24) .|.
+    (fromIntegral (s `B.index` 1) `shiftL` 16) .|.
+    (fromIntegral (s `B.index` 2) `shiftL`  8) .|.
+    (fromIntegral (s `B.index` 3) )
+
+encode64be :: Word64 -> B.ByteString
+encode64be w = B.pack . map fromIntegral $
+                [ (w `shiftR` 56) .&. 0xff
+                , (w `shiftR` 48) .&. 0xff
+                , (w `shiftR` 40) .&. 0xff
+                , (w `shiftR` 32) .&. 0xff
+                , (w `shiftR` 24) .&. 0xff
+                , (w `shiftR` 16) .&. 0xff
+                , (w `shiftR` 8) .&. 0xff
+                , w .&. 0xff
+                ]
 
 ---------- INITIAL S AND P BOXES ARE THE HEXADECIMAL DIGITS OF PI ------------
 
