@@ -12,7 +12,8 @@
 module Crypto.Cipher.Blowfish (Blowfish) where
 
 import Crypto.Classes
-import Data.Array
+import Data.Vector (Vector, (!), (//))
+import qualified Data.Vector as V
 import Data.Bits
 import Data.Word
 import Data.Char
@@ -27,8 +28,8 @@ import GHC.Word
 import GHC.Int
 #endif
 
-type Pbox = Array Word32 Word32
-type Sbox = Array Word32 Word32
+type Pbox = Vector Word32
+type Sbox = Vector Word32
 
 data Blowfish = Blowfish { bfKey :: Key
                          , bfState :: BlowfishState
@@ -73,17 +74,17 @@ mkState k = let (BF p s0 s1 s2 s3) = bfMakeKey . B.unpack $ k
 bfEnc :: Pbox -> BlowfishState -> (Word32, Word32) -> (Word32, Word32)
 bfEnc p a b = aux p a b 0
   where
-    aux :: Pbox -> BlowfishState -> (Word32, Word32) -> Word32 -> (Word32, Word32)
+    aux :: Pbox -> BlowfishState -> (Word32, Word32) -> Int -> (Word32, Word32)
     aux p bs@(BF _ s0 s1 s2 s3) (l,r) 16 = (r `xor` p!17, l `xor` p!16)
     aux p bs@(BF _ s0 s1 s2 s3) (l,r) i = aux p bs (newr,newl) (i+1)
       where newl = l `xor` (p ! i)
             newr = r `xor` (f newl)
             f   :: Word32 -> Word32
             f t  = ((s0!a + s1!b) `xor` (s2 ! c)) + (s3 ! d)
-              where a =  (t `shiftR` 24)
-                    b =  ((t `shiftL` 8) `shiftR` 24)
-                    c =  ((t `shiftL` 16) `shiftR` 24)
-                    d =  ((t `shiftL` 24) `shiftR` 24)
+              where a = fromIntegral (t `shiftR` 24)
+                    b = fromIntegral ((t `shiftL` 8) `shiftR` 24)
+                    c = fromIntegral ((t `shiftL` 16) `shiftR` 24)
+                    d = fromIntegral ((t `shiftL` 24) `shiftR` 24)
 
 
 bfMakeKey   :: [Word8] -> BlowfishState
@@ -92,7 +93,7 @@ bfMakeKey k  = procKey (0,0) (BF (string2Pbox k) iSbox0 iSbox1 iSbox2 iSbox3) 0
 
 
 string2Pbox  :: [Word8] -> Pbox
-string2Pbox k = array (0,17) [(fromIntegral i,xtext!!i) | i <- [0..17]]
+string2Pbox k = V.generate 18 (xtext!!)
   where xtext = zipWith (xor)
                         (compress4 (doShift (makeTo72 (charsToWord32s k) 0) 0))
                         [iPbox ! (fromIntegral i) | i <- [0..17]]
@@ -106,7 +107,7 @@ string2Pbox k = array (0,17) [(fromIntegral i,xtext!!i) | i <- [0..17]]
         compress4 (a:b:c:d:etc) = (a .|. b .|. c .|. d) : compress4 etc
 
 
-procKey :: (Word32, Word32) -> BlowfishState -> Word32 -> BlowfishState
+procKey :: (Word32, Word32) -> BlowfishState -> Int -> BlowfishState
 procKey (l,r) tpbf@(BF p s0 s1 s2 s3) 1042 = tpbf
 procKey (l,r) tpbf@(BF p s0 s1 s2 s3)    i = procKey (nl,nr) (newbf i) (i+2)
   where (nl,nr) = bfEnc p tpbf (l,r)
@@ -159,13 +160,13 @@ encode64be w = B.pack . map fromIntegral $
 ---------- INITIAL S AND P BOXES ARE THE HEXADECIMAL DIGITS OF PI ------------
 
 iPbox :: Pbox
-iPbox  = array (0,17) (zip [0..17]
+iPbox  = (\xs -> V.generate 18 (xs !!)) (
  [0x243f6a88, 0x85a308d3, 0x13198a2e, 0x03707344, 0xa4093822, 0x299f31d0,
   0x082efa98, 0xec4e6c89, 0x452821e6, 0x38d01377, 0xbe5466cf, 0x34e90c6c,
   0xc0ac29b7, 0xc97c50dd, 0x3f84d5b5, 0xb5470917, 0x9216d5d9, 0x8979fb1b])
 
 iSbox0 :: Sbox
-iSbox0  = array (0,255) (zip [0..255]
+iSbox0  = (\xs -> V.generate 256 (xs !!)) (
  [0xd1310ba6, 0x98dfb5ac, 0x2ffd72db, 0xd01adfb7, 0xb8e1afed, 0x6a267e96,
   0xba7c9045, 0xf12c7f99, 0x24a19947, 0xb3916cf7, 0x0801f2e2, 0x858efc16,
   0x636920d8, 0x71574e69, 0xa458fea3, 0xf4933d7e, 0x0d95748f, 0x728eb658,
@@ -211,7 +212,7 @@ iSbox0  = array (0,255) (zip [0..255]
   0x53b02d5d, 0xa99f8fa1, 0x08ba4799, 0x6e85076a])
   
 iSbox1 :: Sbox
-iSbox1  = array (0,255) (zip [0..255]
+iSbox1  = (\xs -> V.generate 256 (xs !!)) (
  [0x4b7a70e9, 0xb5b32944, 0xdb75092e, 0xc4192623, 0xad6ea6b0, 0x49a7df7d,
   0x9cee60b8, 0x8fedb266, 0xecaa8c71, 0x699a17ff, 0x5664526c, 0xc2b19ee1,
   0x193602a5, 0x75094c29, 0xa0591340, 0xe4183a3e, 0x3f54989a, 0x5b429d65,
@@ -257,7 +258,7 @@ iSbox1  = array (0,255) (zip [0..255]
   0x153e21e7, 0x8fb03d4a, 0xe6e39f2b, 0xdb83adf7])
   
 iSbox2 :: Sbox
-iSbox2  = array (0,255) (zip [0..255]
+iSbox2  = (\xs -> V.generate 256 (xs !!)) (
  [0xe93d5a68, 0x948140f7, 0xf64c261c, 0x94692934, 0x411520f7, 0x7602d4f7,
   0xbcf46b2e, 0xd4a20068, 0xd4082471, 0x3320f46a, 0x43b7d4b7, 0x500061af,
   0x1e39f62e, 0x97244546, 0x14214f74, 0xbf8b8840, 0x4d95fc1d, 0x96b591af,
@@ -303,7 +304,7 @@ iSbox2  = array (0,255) (zip [0..255]
   0xd79a3234, 0x92638212, 0x670efa8e, 0x406000e0])
   
 iSbox3 :: Sbox
-iSbox3  = array (0,255) (zip [0..255]
+iSbox3  = (\xs -> V.generate 256 (xs !!)) (
  [0x3a39ce37, 0xd3faf5cf, 0xabc27737, 0x5ac52d1b, 0x5cb0679e, 0x4fa33742,
   0xd3822740, 0x99bc9bbe, 0xd5118e9d, 0xbf0f7315, 0xd62d1c7e, 0xc700c47b,
   0xb78c1b6b, 0x21a19045, 0xb26eb1be, 0x6a366eb4, 0x5748ab2f, 0xbc946e79,
