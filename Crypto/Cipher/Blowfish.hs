@@ -70,12 +70,12 @@ mkState :: Key -> Blowfish
 mkState k = let (BF p s0 s1 s2 s3) = bfMakeKey . B.unpack $ k
             in Blowfish k (BF p s0 s1 s2 s3)
 
-bfEnc :: Pbox -> BlowfishState -> [Word32] -> [Word32]
+bfEnc :: Pbox -> BlowfishState -> (Word32, Word32) -> (Word32, Word32)
 bfEnc p a b = aux p a b 0
   where
-    aux :: Pbox -> BlowfishState -> [Word32] -> Word32 -> [Word32]
-    aux p bs@(BF _ s0 s1 s2 s3) (l:r:[]) 16 = (r `xor` p!17):(l `xor` p!16):[]
-    aux p bs@(BF _ s0 s1 s2 s3) (l:r:[]) i = aux p bs (newr:newl:[]) (i+1)
+    aux :: Pbox -> BlowfishState -> (Word32, Word32) -> Word32 -> (Word32, Word32)
+    aux p bs@(BF _ s0 s1 s2 s3) (l,r) 16 = (r `xor` p!17, l `xor` p!16)
+    aux p bs@(BF _ s0 s1 s2 s3) (l,r) i = aux p bs (newr,newl) (i+1)
       where newl = l `xor` (p ! i)
             newr = r `xor` (f newl)
             f   :: Word32 -> Word32
@@ -87,8 +87,8 @@ bfEnc p a b = aux p a b 0
 
 
 bfMakeKey   :: [Word8] -> BlowfishState
-bfMakeKey [] = procKey [0,0] (BF iPbox iSbox0 iSbox1 iSbox2 iSbox3) 0
-bfMakeKey k  = procKey [0,0] (BF (string2Pbox k) iSbox0 iSbox1 iSbox2 iSbox3) 0
+bfMakeKey [] = procKey (0,0) (BF iPbox iSbox0 iSbox1 iSbox2 iSbox3) 0
+bfMakeKey k  = procKey (0,0) (BF (string2Pbox k) iSbox0 iSbox1 iSbox2 iSbox3) 0
 
 
 string2Pbox  :: [Word8] -> Pbox
@@ -106,10 +106,10 @@ string2Pbox k = array (0,17) [(fromIntegral i,xtext!!i) | i <- [0..17]]
         compress4 (a:b:c:d:etc) = (a .|. b .|. c .|. d) : compress4 etc
 
 
-procKey :: [Word32] -> BlowfishState -> Word32 -> BlowfishState
-procKey (l:r:[]) tpbf@(BF p s0 s1 s2 s3) 1042 = tpbf
-procKey (l:r:[]) tpbf@(BF p s0 s1 s2 s3)    i = procKey [nl,nr] (newbf i) (i+2)
-  where [nl,nr] = bfEnc p tpbf [l,r]
+procKey :: (Word32, Word32) -> BlowfishState -> Word32 -> BlowfishState
+procKey (l,r) tpbf@(BF p s0 s1 s2 s3) 1042 = tpbf
+procKey (l,r) tpbf@(BF p s0 s1 s2 s3)    i = procKey (nl,nr) (newbf i) (i+2)
+  where (nl,nr) = bfEnc p tpbf (l,r)
         newbf x | x <   18 = (BF (p//[(x,nl),(x+1,nr)]) s0 s1 s2 s3)
                 | x <  274 = (BF p (s0//[(x-18,nl),(x-17,nr)]) s1 s2 s3)
                 | x <  530 = (BF p s0 (s1//[(x-274,nl),(x-273,nr)]) s2 s3)
@@ -124,14 +124,14 @@ doChunks n f b =
 		then f x : doChunks n f rest
 		else [ f x ]
 
-toW32Pair :: B.ByteString -> [Word32]
+toW32Pair :: B.ByteString -> (Word32, Word32)
 toW32Pair b = let (x1, x2) = B.splitAt 4 b
                   w1 = decode32be x1
                   w2 = decode32be x2
-              in [w1,w2]
+              in (w1,w2)
 
-fromW32Pair :: [Word32] -> B.ByteString
-fromW32Pair (w1:w2:[])
+fromW32Pair :: (Word32, Word32) -> B.ByteString
+fromW32Pair (w1,w2)
     = let w1' = fromIntegral w1
           w2' = fromIntegral w2
           w = (w1' `shiftL` 32) .|. w2'
