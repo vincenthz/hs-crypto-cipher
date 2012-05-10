@@ -58,8 +58,9 @@ selectDecrypt x@(BF p _ _ _ _) = (V.reverse p, x)
 
 cipher :: (Pbox, BlowfishState) -> B.ByteString -> B.ByteString
 cipher (p, bs) b
+    | B.length b == 0 = B.empty
     | B.length b `mod` 8 /= 0 = error "invalid data length"
-    | otherwise = B.concat $ doChunks 8 (fromW32Pair . bfEnc p bs . toW32Pair) b
+    | otherwise = B.concat $ doChunks 8 (fromW32Pair . coreCrypto p bs . toW32Pair) b
 
 initBoxes :: Key -> Blowfish
 initBoxes k = let (BF p s0 s1 s2 s3) = bfMakeKey k
@@ -78,10 +79,10 @@ keyFromByteString k
   where        
     w8tow32 :: [Word8] -> [Word32]
     w8tow32 [] = []
-    w8tow32 (a:b:c:d:xs) = ( (fromIntegral a) .|.
-                             (fromIntegral b `shiftL`  8) .|.
-                             (fromIntegral c `shiftL` 16) .|.
-                             (fromIntegral d `shiftL` 24) ) : w8tow32 xs
+    w8tow32 (a:b:c:d:xs) = ( (fromIntegral a `shiftL` 24) .|.
+                             (fromIntegral b `shiftL` 16) .|.
+                             (fromIntegral c `shiftL`  8) .|.
+                             (fromIntegral d) ) : w8tow32 xs
     w8tow32 _ = error $ "internal error: Crypto.Cipher.Blowfish:keyFromByteString"
 
 keyToByteString :: Key -> B.ByteString
@@ -89,26 +90,28 @@ keyToByteString = B.pack . w32tow8 . (\x -> map (x!) [0..17]) . unKey
   where
     w32tow8 :: [Word32] -> [Word8]
     w32tow8 = map fromIntegral . concat . map f
-    f w = [ w .&. 0xff
-          , (w `shiftR` 8) .&. 0xff
+    f w = [ (w `shiftR` 24) .&. 0xff
           , (w `shiftR` 16) .&. 0xff
-          , (w `shiftR` 24) .&. 0xff
+          , (w `shiftR` 8) .&. 0xff
+          , w .&. 0xff
           ]
 
-bfEnc :: Pbox -> BlowfishState -> (Word32, Word32) -> (Word32, Word32)
-bfEnc x y z = aux x y z 0
+coreCrypto :: Pbox -> BlowfishState -> (Word32, Word32) -> (Word32, Word32)
+coreCrypto p bs i = (\(l,r) -> (r `xor` p!17, l `xor` p!16))
+                  $ V.foldl' (doRound bs) i (V.take 16 p)
   where
-    aux :: Pbox -> BlowfishState -> (Word32, Word32) -> Int -> (Word32, Word32)
-    aux p _                     (l,r) 16 = (r `xor` p!17, l `xor` p!16)
-    aux p bs@(BF _ s0 s1 s2 s3) (l,r) i = aux p bs (newr,newl) (i+1)
-      where newl = l `xor` (p ! i)
-            newr = r `xor` (f newl)
+    doRound :: BlowfishState -> (Word32, Word32) -> Word32 -> (Word32, Word32)
+    doRound (BF _ s0 s1 s2 s3) (l,r) pv =
+        let newr = l `xor` pv
+            newl = r `xor` (f newr)
+        in (newl, newr)
+          where
             f   :: Word32 -> Word32
-            f t  = ((s0!a + s1!b) `xor` (s2 ! c)) + (s3 ! d)
-              where a = fromIntegral (t `shiftR` 24)
-                    b = fromIntegral ((t `shiftL` 8) `shiftR` 24)
-                    c = fromIntegral ((t `shiftL` 16) `shiftR` 24)
-                    d = fromIntegral ((t `shiftL` 24) `shiftR` 24)
+            f t = let a = s0 ! (fromIntegral $ (t `shiftR` 24) .&. 0xff)
+                      b = s1 ! (fromIntegral $ (t `shiftR` 16) .&. 0xff)
+                      c = s2 ! (fromIntegral $ (t `shiftR` 8) .&. 0xff)
+                      d = s3 ! (fromIntegral $ t .&. 0xff)
+                  in ((a + b) `xor` c) + d
 
 bfMakeKey :: Key -> BlowfishState
 bfMakeKey (Key k) = procKey (0,0) (BF (V.zipWith xor k iPbox) iSbox0 iSbox1 iSbox2 iSbox3) 0
@@ -116,12 +119,13 @@ bfMakeKey (Key k) = procKey (0,0) (BF (V.zipWith xor k iPbox) iSbox0 iSbox1 iSbo
 procKey :: (Word32, Word32) -> BlowfishState -> Int -> BlowfishState
 procKey _     tpbf                    1042 = tpbf
 procKey (l,r) tpbf@(BF p s0 s1 s2 s3)    i = procKey (nl,nr) (newbf i) (i+2)
-  where (nl,nr) = bfEnc p tpbf (l,r)
+  where (nl,nr) = coreCrypto p tpbf (l,r)
         newbf x | x <   18 = (BF (p//[(x,nl),(x+1,nr)]) s0 s1 s2 s3)
                 | x <  274 = (BF p (s0//[(x-18,nl),(x-17,nr)]) s1 s2 s3)
                 | x <  530 = (BF p s0 (s1//[(x-274,nl),(x-273,nr)]) s2 s3)
                 | x <  786 = (BF p s0 s1 (s2//[(x-530,nl),(x-529,nr)]) s3)
                 | x < 1042 = (BF p s0 s1 s2 (s3//[(x-786,nl),(x-785,nr)]))
+                | otherwise = error "internal error: Crypto.Cipher.Blowfish:procKey "
 
 
 doChunks :: Int -> (B.ByteString -> B.ByteString) -> B.ByteString -> [B.ByteString]
@@ -164,6 +168,8 @@ encode64be w = B.pack . map fromIntegral $
                 ]
 
 ---------- INITIAL S AND P BOXES ARE THE HEXADECIMAL DIGITS OF PI ------------
+
+-- TODO build these tables using TemplateHaskell and a digit extraction algorithm
 
 iPbox :: Pbox
 iPbox  = (\xs -> V.generate 18 (xs !!)) (
