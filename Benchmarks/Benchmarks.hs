@@ -93,7 +93,7 @@ main = withConfig defaultConfig $ do
 	env <- measureEnvironment
 	l   <- mapM (doOne env)
 		[ ("RC4"        , rc4Encrypt)
-        , ("Blowfish"   , blowfishEncrypt)
+		, ("Blowfish"   , blowfishEncrypt)
 		, ("Camellia128", camelliaEncrypt128)
 		, ("AES128"     , aesEncrypt128)
 		, ("AES128-CBC" , aesEncrypt128CBC)
