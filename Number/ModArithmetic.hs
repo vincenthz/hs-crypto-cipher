@@ -9,6 +9,7 @@
 module Number.ModArithmetic
 	( exponantiation_rtl_binary
 	, exponantiation
+	, multiplication
 	, inverse
 	) where
 
@@ -33,11 +34,19 @@ exponantiation_rtl_binary b e m = loop e b 1
 -- using repetitive squaring.
 exponantiation :: Integer -> Integer -> Integer -> Integer
 exponantiation b e m
+             | b == 1    = b
              | e == 0    = 1
              | e == 1    = b `mod` m
              | even e    = let p = (exponantiation b (e `div` 2) m) `mod` m
                            in  (p^(2::Integer)) `mod` m
              | otherwise = (b * exponantiation b (e-1) m) `mod` m
+
+-- | multiply 2 integers in Zm only performing the modulo operation if necessary
+multiplication :: Integer -> Integer -> Integer -> Integer
+multiplication a b m
+             | a == 1    = b
+             | b == 1    = a
+             | otherwise = (a * b) `mod` m
 
 -- | inverse computes the modular inverse as in g^(-1) mod m
 inverse :: Integer -> Integer -> Maybe Integer

@@ -15,6 +15,7 @@ module Crypto.Cipher.RSA
 	, HashASN1
 	, generate
 	, decrypt
+	, decryptWithBlinding
 	, encrypt
 	, sign
 	, verify
@@ -25,7 +26,7 @@ import Crypto.Random
 import Crypto.Types.PubKey.RSA
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
-import Number.ModArithmetic (exponantiation, inverse)
+import Number.ModArithmetic (exponantiation, multiplication, inverse)
 import Number.Prime (generatePrime)
 import Number.Serialize
 import Data.Maybe (fromJust)
@@ -66,26 +67,43 @@ unpadPKCS1 packed
 
 {- dpSlow computes the decrypted message not using any precomputed cache value.
    only n and d need to valid. -}
-dpSlow :: PrivateKey -> ByteString -> Either Error ByteString
-dpSlow pk c = i2ospOf (private_size pk) $ expmod (os2ip c) (private_d pk) (private_n pk)
+dpSlow :: Integer -> PrivateKey -> ByteString -> Either Error ByteString
+dpSlow _ pk c = i2ospOf (private_size pk) $ expmod (os2ip c) (private_d pk) (private_n pk)
 
 {- dpFast computes the decrypted message more efficiently if the
    precomputed private values are available. mod p and mod q are faster
    to compute than mod pq -}
-dpFast :: PrivateKey -> ByteString -> Either Error ByteString
-dpFast pk c = i2ospOf (private_size pk) (m2 + h * (private_q pk))
+dpFast :: Integer -> PrivateKey -> ByteString -> Either Error ByteString
+dpFast r pk c = i2ospOf (private_size pk) (multiplication rm1 (m2 + h * (private_q pk)) (private_n pk))
 	where
-		iC = os2ip c
+		re = expmod r (public_e $ private_pub pk) (private_n pk)
+		rm1 = fromJust $ inverse r (private_n pk)
+		iC = multiplication re (os2ip c) (private_n pk)
 		m1 = expmod iC (private_dP pk) (private_p pk)
 		m2 = expmod iC (private_dQ pk) (private_q pk)
 		h  = ((private_qinv pk) * (m1 - m2)) `mod` (private_p pk)
 
-{-| decrypt message using the private key. -}
-decrypt :: PrivateKey -> ByteString -> Either Error ByteString
-decrypt pk c
+{-| decrypt message using the private key using cryptoblinding technique.
+ -  the r parameter need to be a randomly generated integer between 1 and N.
+ -}
+decryptWithBlinding :: Integer    -- ^ Random integer between 1 and N used for blinding
+                    -> PrivateKey -- ^ RSA private key
+                    -> ByteString -- ^ cipher text
+                    -> Either Error ByteString
+decryptWithBlinding r pk c
 	| B.length c /= (private_size pk) = Left MessageSizeIncorrect
-	| otherwise                       = dp pk c >>= unpadPKCS1
+	| otherwise                       = dp r pk c >>= unpadPKCS1
 		where dp = if private_p pk /= 0 && private_q pk /= 0 then dpFast else dpSlow
+
+{-| decrypt message using the private key.
+ -  Use this method only when the decryption is not in a context where an attacker
+ -  could gain information from the timing of the operation. In this context use
+ -  decryptWithBlinding.
+ -}
+decrypt :: PrivateKey -- ^ RSA private key
+        -> ByteString -- ^ cipher text
+        -> Either Error ByteString
+decrypt = decryptWithBlinding 1
 
 {- | encrypt a bytestring using the public key and a CryptoRandomGen random generator.
  - the message need to be smaller than the key size - 11
@@ -100,7 +118,7 @@ encrypt rng pk m
 
 {-| sign message using private key, a hash and its ASN1 description -}
 sign :: HashF -> HashASN1 -> PrivateKey -> ByteString -> Either Error ByteString
-sign hash hashdesc pk m = makeSignature hash hashdesc (private_size pk) m >>= d pk
+sign hash hashdesc pk m = makeSignature hash hashdesc (private_size pk) m >>= d 1 pk
 	where d = if private_p pk /= 0 && private_q pk /= 0 then dpFast else dpSlow
 
 {-| verify message with the signed message -}
@@ -119,20 +137,19 @@ generate rng size e = do
 	case inverse e phi of
 		Nothing -> generate rng' size e
 		Just d  -> do
+			let pub = PublicKey
+				{ public_size = size
+				, public_n    = n
+				, public_e    = e
+				}
 			let priv = PrivateKey
-				{ private_size = size
-				, private_n    = n
+				{ private_pub  = pub
 				, private_d    = d
 				, private_p    = p
 				, private_q    = q
 				, private_dP   = d `mod` (p-1)
 				, private_dQ   = d `mod` (q-1)
 				, private_qinv = fromJust $ inverse q p -- q and p are coprime, so fromJust is safe.
-				}
-			let pub = PublicKey
-				{ public_size = size
-				, public_n    = n
-				, public_e    = e
 				}
 			Right ((pub, priv), rng')
 	where

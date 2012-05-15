@@ -77,13 +77,17 @@ withAleasInteger rng i f = case reseed (i2osp (if i < 0 then -i else i)) rng of
 		Right v -> fst v
 -}
 
-newtype RSAMessage = RSAMessage B.ByteString deriving (Show, Eq)
+data RSAMessage = RSAMessage
+                                Integer      -- ^ only used for blinding
+                                B.ByteString -- ^ message
+    deriving (Show, Eq)
 
 instance Arbitrary RSAMessage where
 	arbitrary = do
-		sz <- choose (0, 128 - 11)
+		sz      <- choose (0, 128 - 11)
+		blinder <- choose (1, RSA.public_n rsaPublickey - 1)
 		ws <- replicateM sz (choose (0,255) :: Gen Int)
-		return $ RSAMessage $ B.pack $ map fromIntegral ws
+		return $ RSAMessage blinder (B.pack $ map fromIntegral ws)
 
 {- this is a just test rng. this is absolutely not a serious RNG. DO NOT use elsewhere -}
 data Rng = Rng (Int, Int)
@@ -124,14 +128,13 @@ prop_rsa_generate_valid (Positive i, RSAMessage msgz) =
 	(either Left (RSA.decrypt priv . fst) $ RSA.encrypt rng pub msg) == Right msg
 -}
 
-prop_rsa_valid fast (RSAMessage msg) =
-	(either Left (RSA.decrypt pk . fst) $ RSA.encrypt rng rsaPublickey msg) == Right msg
-	where pk       = if fast then rsaPrivatekey else rsaPrivatekey { RSA.private_p = 0, RSA.private_q = 0 }
+prop_rsa_valid fast blinding (RSAMessage blindR msg) =
+    (either Left (doDecrypt pk . fst) $ RSA.encrypt rng rsaPublickey msg) == Right msg
+    where
+           pk = if fast then rsaPrivatekey else rsaPrivatekey { RSA.private_p = 0, RSA.private_q = 0 }
+           doDecrypt = if blinding then RSA.decryptWithBlinding blindR else RSA.decrypt
 
-prop_rsa_fast_valid  = prop_rsa_valid True
-prop_rsa_slow_valid  = prop_rsa_valid False
-
-prop_rsa_sign_valid fast (RSAMessage msg) = (either Left (\smsg -> verify msg smsg) $ sign msg) == Right True
+prop_rsa_sign_valid fast (RSAMessage _ msg) = (either Left (\smsg -> verify msg smsg) $ sign msg) == Right True
 	where
 		verify   = RSA.verify (SHA1.hash) sha1desc rsaPublickey
 		sign     = RSA.sign (SHA1.hash) sha1desc pk
@@ -142,8 +145,7 @@ prop_rsa_sign_fast_valid = prop_rsa_sign_valid True
 prop_rsa_sign_slow_valid = prop_rsa_sign_valid False
 
 rsaPrivatekey = RSA.PrivateKey
-	{ RSA.private_size = 128
-	, RSA.private_n    = 140203425894164333410594309212077886844966070748523642084363106504571537866632850620326769291612455847330220940078873180639537021888802572151020701352955762744921926221566899281852945861389488419179600933178716009889963150132778947506523961974222282461654256451508762805133855866018054403911588630700228345151
+	{ RSA.private_pub  = rsaPublickey
 	, RSA.private_d    = 133764127300370985476360382258931504810339098611363623122953018301285450176037234703101635770582297431466449863745848961134143024057267778947569638425565153896020107107895924597628599677345887446144410702679470631826418774397895304952287674790343620803686034122942606764275835668353720152078674967983573326257
 	, RSA.private_p    = 12909745499610419492560645699977670082358944785082915010582495768046269235061708286800087976003942261296869875915181420265794156699308840835123749375331319
 	, RSA.private_q    = 10860278066550210927914375228722265675263011756304443428318337179619069537063135098400347475029673115805419186390580990519363257108008103841271008948795129
@@ -179,7 +181,7 @@ dsaPublickey = DSA.PublicKey
 	, DSA.public_y      = 0x4fa505e86e32922f1fa1702a120abdba088bb4be801d4c44f7fc6b9094d85cd52c429cbc2b39514e30909b31e2e2e0752b0fc05c1a7d9c05c3e52e49e6edef4c
 	}
 
-prop_dsa_valid (RSAMessage msg) =
+prop_dsa_valid (RSAMessage _ msg) =
 	case DSA.verify signature (SHA1.hash) dsaPublickey msg of
 		Left err -> False
 		Right b  -> b
@@ -279,8 +281,10 @@ symCipherMarshallTests = testGroup "symmetric cipher marshall"
 	]
 
 asymEncryptionTests = testGroup "assymmetric cipher encryption"
-	[ testProperty "RSA (slow)" prop_rsa_slow_valid
-	, testProperty "RSA (fast)" prop_rsa_fast_valid
+	[ testProperty "RSA (slow)" (prop_rsa_valid False False)
+	, testProperty "RSA (fast)" (prop_rsa_valid True  False)
+	, testProperty "RSA (slow+blind)" (prop_rsa_valid False True)
+	, testProperty "RSA (fast+blind)" (prop_rsa_valid True  True)
 	]
 
 asymSignatureTests = testGroup "assymmetric cipher signature"
