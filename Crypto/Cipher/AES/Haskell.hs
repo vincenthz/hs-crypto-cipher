@@ -111,6 +111,7 @@ data Key = Key (Vector Word8)
 	deriving (Show,Eq)
 
 type IV = B.ByteString
+type Block = B.ByteString
 
 type AESState = MutableByteArray RealWorld
 
@@ -165,14 +166,14 @@ makeChunks = doChunks id
 newAESState :: IO AESState
 newAESState = newAlignedPinnedByteArray 16 16
 
-coreEncrypt :: Key -> ByteString -> ByteString
+coreEncrypt :: Key -> Block -> Block
 coreEncrypt key input = B.unsafeCreate (B.length input) $ \ptr -> do
 	st <- newAESState
 	swapBlock input st
 	aesMain (getNbr key) key st
 	swapBlockInv st ptr
 
-coreDecrypt :: Key -> ByteString -> ByteString
+coreDecrypt :: Key -> Block -> Block
 coreDecrypt key input = B.unsafeCreate (B.length input) $ \ptr -> do
 	st <- newAESState
 	swapBlock input st
