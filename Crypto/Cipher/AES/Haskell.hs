@@ -154,11 +154,13 @@ decrypt key b
 	| otherwise                = B.concat $ doChunks (coreDecrypt key) b
 
 doChunks :: (B.ByteString -> B.ByteString) -> B.ByteString -> [B.ByteString]
-doChunks f b =
-	let (x, rest) = B.splitAt 16 b in
-	if B.length rest >= 16
-		then f x : doChunks f rest
-		else [ f x ]
+doChunks f b
+    | B.null b  = []
+    | otherwise =
+        let (x, rest) = B.splitAt 16 b in
+        if B.length rest >= 16
+            then f x : doChunks f rest
+            else [ f x ]
 
 makeChunks :: B.ByteString -> [B.ByteString]
 makeChunks = doChunks id
