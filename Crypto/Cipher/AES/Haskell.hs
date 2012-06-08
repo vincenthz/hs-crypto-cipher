@@ -315,13 +315,26 @@ coreExpandKey vkey
 		cR0 it r0 r1 r2 r3 =
 			(sbox r1 `xor` rcon it, sbox r2, sbox r3, sbox r0)
 
+rotateR' :: Word32 -> Int -> Word32
+rotateR' = case getSystemEndianness of
+           LittleEndian -> rotateR
+           BigEndian    -> rotateL
+{-# INLINE rotateR' #-}
+
+rotateL' :: Word32 -> Int -> Word32
+rotateL' = case getSystemEndianness of
+           LittleEndian -> rotateL
+           BigEndian    -> rotateR
+{-# INLINE rotateL' #-}
+
+
 {-# INLINE shiftRows #-}
 shiftRows :: AESState -> IO ()
 shiftRows blk = do
 	r32 blk 0 >>= w32 blk 0 . msbox32
-	r32 blk 1 >>= \t1 -> w32 blk 1 $ rotateR (msbox32 t1) 8
-	r32 blk 2 >>= \t2 -> w32 blk 2 $ rotateR (msbox32 t2) 16
-	r32 blk 3 >>= \t3 -> w32 blk 3 $ rotateR (msbox32 t3) 24
+	r32 blk 1 >>= \t1 -> w32 blk 1 $ rotateR' (msbox32 t1) 8
+	r32 blk 2 >>= \t2 -> w32 blk 2 $ rotateR' (msbox32 t2) 16
+	r32 blk 3 >>= \t3 -> w32 blk 3 $ rotateR' (msbox32 t3) 24
 
 {-# INLINE addRoundKey #-}
 addRoundKey :: Key -> Int -> AESState -> IO ()
@@ -355,9 +368,9 @@ mixColumns state = pr 0 >> pr 1 >> pr 2 >> pr 3
 shiftRowsInv :: AESState -> IO ()
 shiftRowsInv blk = do
 	r32 blk 0 >>= w32 blk 0 . mrsbox32
-	r32 blk 1 >>= \t1 -> w32 blk 1 $ mrsbox32 $ rotateL t1 8
-	r32 blk 2 >>= \t2 -> w32 blk 2 $ mrsbox32 $ rotateL t2 16
-	r32 blk 3 >>= \t3 -> w32 blk 3 $ mrsbox32 $ rotateL t3 24
+	r32 blk 1 >>= \t1 -> w32 blk 1 $ mrsbox32 $ rotateL' t1 8
+	r32 blk 2 >>= \t2 -> w32 blk 2 $ mrsbox32 $ rotateL' t2 16
+	r32 blk 3 >>= \t3 -> w32 blk 3 $ mrsbox32 $ rotateL' t3 24
 
 {-# INLINE mixColumnsInv #-}
 mixColumnsInv :: AESState -> IO ()
