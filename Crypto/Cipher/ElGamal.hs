@@ -21,13 +21,14 @@ module Crypto.Cipher.ElGamal
     , encryptWith
     , encrypt
     , decrypt
+{-
     , sign
     , verify
+-}
     ) where
 
 import Number.ModArithmetic (exponantiation, inverse)
-import Number.Prime (generateSafePrime)
-import Number.Generate (generateOfSize, generateBetween)
+import Number.Generate (generateOfSize)
 import Crypto.Types.PubKey.DH
 import Crypto.Random
 import Control.Arrow (first)
@@ -61,10 +62,12 @@ encrypt rng params public m = (\(b,rng') -> (encryptWith b params public m,rng')
 
 -- | decrypt message
 decrypt :: Params -> PrivateNumber -> (Integer, Integer) -> Integer
-decrypt (p,g) (PrivateNumber a) (c1,c2) = (c2 * sm1) `mod` p
+decrypt (p,_) (PrivateNumber a) (c1,c2) = (c2 * sm1) `mod` p
     where s   = exponantiation c1 a p
           sm1 = fromJust $ inverse s p -- always inversible in Zp
 
+{-
 sign = undefined
 
 verify = undefined
+-}
