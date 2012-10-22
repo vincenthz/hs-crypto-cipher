@@ -1,0 +1,13 @@
+# Makefile for the C files supporting Haskell RC4
+
+%.hs : %.hsc
+	hsc2hs $<
+
+.c.o :
+	cc -std=c99 -O4 -c $<
+
+RC4H.hs: RC4H.hsc
+RC4CLib.o: RC4H.hs
+RC4Clib.o: RC4.h
+
+all: RC4H.hs RC4CLib.o
