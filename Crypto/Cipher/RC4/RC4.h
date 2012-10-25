@@ -9,5 +9,5 @@ typedef struct {
 } CCtx;
 
 // Function prototypes
-CCtx* initCtx(u_char * key, void *ctx);
-u_char * rc4(CCtx *Ctx, u_char *input, int len);
+CCtx* initCtx(uint8_t * key, void *ctx);
+uint8_t * rc4(CCtx *Ctx, uint8_t *input, uint32_t len);

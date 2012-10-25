@@ -5,7 +5,7 @@
 {-# LINE 2 "RC4H.hsc" #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 
-module Crypto.Cipher.RC4.RC4H
+module RC4.RC4H
     ( CCtx
     , mkCCtx
     , ctxI
@@ -45,10 +45,10 @@ ctxState = (\hsc_ptr -> peekByteOff hsc_ptr 8)
 -- | Make a new context, pretend it is a bytestring
 mkCCtx :: IO CCtx
 mkCCtx = do
-    -- Needs enough to store two Int and a Pointer
-    ctx  :: CCtx <- mallocBytes 100 -- Hope this is enough
+    -- Needs enough to store two Ints and a Pointer
+    ctx  :: CCtx <- mallocBytes 12
     -- Needs enough to store 256 Word8
-    perm :: Ptr () <- mallocBytes 2000 -- Hope this is enough
+    perm :: Ptr () <- mallocBytes 256
     ((\hsc_ptr -> pokeByteOff hsc_ptr 0)) ctx (0::Int)
 {-# LINE 44 "RC4H.hsc" #-}
     ((\hsc_ptr -> pokeByteOff hsc_ptr 4)) ctx (0::Int)
