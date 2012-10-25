@@ -4,8 +4,6 @@
 #include <string.h>
 #include <stdint.h>
 
-#include "RC4.h"
-
 /*
  *  Posix C99 standard types:
  *
@@ -22,41 +20,25 @@ void swap(uint8_t *i, uint8_t *j) {
 }
 
 /* Key scheduling algorithm. Swap array elements based on the key. */
-u_char* ksa(u_char *key) {
+uint8_t* initCtx(uint8_t *key, uint8_t * state) {
   uint32_t keylen, j=0, i = 0;
-  uint8_t* State = malloc(256*sizeof(u_char));
   // Initialize to the identity permutation
-  for(i=0; i<256; i++) {
-    State[i] = i;
-  }
+  for(i=0; i<256; i++) { state[i] = i; }
   keylen = (uint32_t) strlen((char *) key);
 	
   for(i=0; i<256; i++) {
-    j = (j + State[i] + key[i%keylen]) % 256;
-    swap(&State[i], &State[j]);
+    j = (j + state[i] + key[i%keylen]) % 256;
+    swap(&state[i], &state[j]);
   }
-  return State;
-}
-
-/* We pretend the incoming pointer to context is a Ptr (), in
-   order to make the Haskell to C transition work.
- */
-CCtx* initCtx(uint8_t * key, void* ctx) {
-  uint8_t* id_perm = ksa(key);
-  ((CCtx *) ctx) -> i = 0;
-  ((CCtx *) ctx) -> j = 0;
-  ((CCtx *) ctx) -> state = id_perm;
-  return ctx;
+  return state;
 }
 
 /* Encrypt or Decrypt */
-uint8_t* rc4(CCtx *ctx, uint8_t *input, uint32_t len) {
-  register uint8_t *output = malloc(len);
-  register uint32_t i = ctx -> i;
-  register uint32_t j = ctx -> j;
-  register uint8_t *state = ctx -> state;
+uint8_t * rc4(uint8_t * state, uint32_t * iptr, uint32_t * jptr, uint8_t *input, uint32_t len, uint8_t * output) {
+  register uint32_t i = *iptr;
+  register uint32_t j = *jptr;
   register uint8_t temp, si, sj;
-	
+  register uint8_t * outptr, inptr;
   for(register uint32_t m=0; m<len; m++) {
     i = (i+1) & 0xff;
     si = state[i];
@@ -65,11 +47,11 @@ uint8_t* rc4(CCtx *ctx, uint8_t *input, uint32_t len) {
     // swap(&state[i], &state[j]);
     state[i] = sj;
     state[j] = si;
-    output[m] = input[m] ^ (state[(si+sj) & 0xff]);
+    *output++ = *input++ ^ (state[(si+sj) & 0xff]);
   }
 
-  ctx -> i = i;
-  ctx -> j = j;
+  *iptr = i;
+  *jptr = j;
 
   return (output);
 }
