@@ -34,11 +34,16 @@ uint8_t* initCtx(uint8_t *key, uint8_t * state) {
 }
 
 /* Encrypt or Decrypt */
-uint8_t * rc4(uint8_t * state, uint32_t * iptr, uint32_t * jptr, uint8_t *input, uint32_t len, uint8_t * output) {
+uint8_t * rc4(uint8_t * state,
+              uint32_t * iptr,
+              uint32_t * jptr,
+              uint8_t *input,
+              uint32_t len,
+              uint8_t * output) {
   register uint32_t i = *iptr;
   register uint32_t j = *jptr;
   register uint8_t temp, si, sj;
-  register uint8_t * outptr, inptr;
+  uint8_t *outPtr = output; // Save initial value of output pointer
   for(register uint32_t m=0; m<len; m++) {
     i = (i+1) & 0xff;
     si = state[i];
@@ -47,11 +52,10 @@ uint8_t * rc4(uint8_t * state, uint32_t * iptr, uint32_t * jptr, uint8_t *input,
     // swap(&state[i], &state[j]);
     state[i] = sj;
     state[j] = si;
-    *output++ = *input++ ^ (state[(si+sj) & 0xff]);
+    *output++ = *input++ ^ (state[((si+sj) & 0xff)]);
   }
-
   *iptr = i;
   *jptr = j;
-
-  return (output);
+  // Return initial value of output pointer
+  return (outPtr);
 }
