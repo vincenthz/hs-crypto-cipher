@@ -2,7 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- | Wrappers for C version of the RC4 encryption functions.
-module RC4.RC4C
+module Crypto.Cipher.RC4.RC4C
     ( Ctx
     , encrypt
     , decrypt
@@ -11,7 +11,6 @@ module RC4.RC4C
 
 import           Foreign
 import           Foreign.C
--- import           Foreign.C.Types
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Internal as B
 import qualified Data.ByteString.Char8 as BC8

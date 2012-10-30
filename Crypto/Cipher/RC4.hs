@@ -2,57 +2,81 @@
 -- Module      : Crypto.Cipher.RC4
 -- License     : BSD-style
 -- Maintainer  : Vincent Hanquez <vincent@snarc.org>
--- Author      : Peter White <peter@janrain.com>
 -- Stability   : experimental
 -- Portability : Good
 --
-
-{-# LANGUAGE ForeignFunctionInterface #-}
-{-# LANGUAGE EmptyDataDecls #-}
 
 module Crypto.Cipher.RC4 (
 	Ctx,
 	initCtx,
 	encrypt,
-	decrypt
+	decrypt,
+	encryptlazy,
+	decryptlazy
 	) where
 
-import           Foreign
-import           Foreign.C.Types
-import           Foreign.C.String
+import Data.Vector.Unboxed
+import Data.Bits (xor)
+import Data.Word
+import Control.Arrow (second)
+import Data.Maybe (fromJust)
 import qualified Data.ByteString as B
-import qualified Data.ByteString.Char8 as BC8
-import           Crypto.Cipher.RC4.RC4H
+import qualified Data.ByteString.Lazy as L
+import Prelude hiding (length)
 
-----------------------------------------------------------------------
--- Crypto (RC4)
-----------------------------------------------------------------------
+type Ctx = (Vector Word8, Word8, Word8)
 
-type Ctx = Ptr CCtx
+swap :: Vector Word8 -> Int -> Int -> Vector Word8
+swap arr x y
+	| x == y    = arr
+	| otherwise = arr // [(x, arr ! y), (y, arr ! x)]
 
-foreign import ccall unsafe "RC4.h initCtx"
-    c_initCtx :: Ptr CChar -> Ptr () -> IO Ctx
+setKey :: Vector Word8 -> Int -> Word8 -> Int -> Vector Word8 -> Vector Word8
+setKey _   _  _  256 arr = arr
+setKey key ki si i   arr = setKey key ki' si' (i + 1) (swap arr (fromIntegral si') i)
+	where
+		si' = si + (key ! ki) + (arr ! i)
+		ki' = (ki + 1) `mod` (length key)
 
-initCtx :: B.ByteString -> IO Ctx
-initCtx key = do
-    -- Need to make a context in Haskell land
-    ctx <- mkCCtx
-    
-    B.useAsCString key $ \key_ptr -> do
-        -- Temporarily pretent the pointer to Ctx (ctx) is a pointer to ()
-        ctx' <- c_initCtx key_ptr ctx
-        -- state <- ctxState ctx
-        return ctx'
+{- | initCtx initialize the Ctx with the key as parameter.
+   the key can be of any size but not empty -}
+initCtx :: [Word8] -> Ctx
+initCtx key = (setKey (fromList key) 0 0 0 initialArray, 0, 0)
+	where
+		initialArray = generate 256 (\i -> fromIntegral i)
 
-foreign import ccall unsafe "RC4.h rc4"
-    c_rc4 :: Ctx -> Ptr CChar -> CInt -> IO (Ptr CChar)
-      
-encrypt :: Ctx -> Int -> B.ByteString -> IO B.ByteString
-encrypt ctx len clear =
-    B.useAsCString clear $ \clear_ptr -> do
-        out_ptr <- c_rc4 ctx clear_ptr (fromIntegral len)
-        hsOutput <- peekCStringLen (out_ptr, len)
-        return (BC8.pack hsOutput)
+getNextChar :: Ctx -> (Word8, Ctx)
+getNextChar (arr, x, y) = (c, (na, x', y'))
+	where
+		na = swap arr (fromIntegral x') (fromIntegral y')
+		x' = x + 1
+		y' = sx + y
+		sx = arr ! (fromIntegral x')
+		c  = na ! (fromIntegral (sx + (arr ! (fromIntegral y'))))
 
-decrypt :: Ctx -> Int -> B.ByteString -> IO B.ByteString
+genstream :: Ctx -> Int -> (B.ByteString, Ctx)
+genstream ctx len = second fromJust $ B.unfoldrN len (\c -> Just $ getNextChar c) ctx
+
+{- | encrypt with the current context a bytestring and returns a new context
+   and the resulted encrypted bytestring -}
+encrypt :: Ctx -> B.ByteString -> (Ctx, B.ByteString)
+encrypt ctx d = (ctx', B.pack $ B.zipWith xor d rc4stream)
+	where
+		(rc4stream, ctx') = genstream ctx (B.length d)
+
+{- | decrypt with the current context a bytestring and returns a new context
+   and the resulted decrypted bytestring -}
+decrypt :: Ctx -> B.ByteString -> (Ctx, B.ByteString)
 decrypt = encrypt
+
+{- | encrypt with the current context a lazy bytestring and returns a new context
+   and the resulted lencrypted lazy bytestring -}
+encryptlazy :: Ctx -> L.ByteString -> (Ctx, L.ByteString)
+encryptlazy ctx d = (ctx', L.pack $ L.zipWith xor d (L.fromChunks [ rc4stream ]))
+	where
+		(rc4stream, ctx') = genstream ctx (fromIntegral $ L.length d)
+
+{- | decrypt with the current context a lazy bytestring and returns a new context
+   and the resulted decrypted lazy bytestring -}
+decryptlazy :: Ctx -> L.ByteString -> (Ctx, L.ByteString)
+decryptlazy = encryptlazy

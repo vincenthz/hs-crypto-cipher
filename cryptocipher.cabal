@@ -20,7 +20,11 @@ Flag benchmark
 
 Flag aesni
   Description:       Use fast aesni operations that are cpu dependant
-  Default:           False
+  Default:           True
+
+Flag rc4c
+  Description:       Use C version of RC4
+  Default:           True
 
 Library
   Build-Depends:     base >= 4 && < 5
@@ -54,6 +58,10 @@ Library
     Exposed-modules: Crypto.Cipher.AES.X86NI
     C-sources:       cbits/aes/x86ni.c
     CC-options:      -mssse3 -maes
+  if flag(rc4c)
+    Exposed-modules: Crypto.Cipher.RC4.RC4C
+    C-sources:       cbits/rc4/RC4CLib.c
+    CC-options:      -mssse3 -maes -std=c99 -O4
 
 Test-Suite test-cryptocipher
   type:              exitcode-stdio-1.0
@@ -87,6 +95,9 @@ Executable           Benchmarks
     cpp-options:     -DHAVE_AESNI
     C-sources:       cbits/aes/x86ni.c
     CC-options:      -mssse3 -maes
+  if flag(rc4c)
+    C-sources:       cbits/rc4/RC4CLib.c
+    CC-options:      -mssse3 -maes -std=c99 -O4
 
 source-repository head
   type:     git
