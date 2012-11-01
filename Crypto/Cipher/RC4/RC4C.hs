@@ -11,6 +11,7 @@ module Crypto.Cipher.RC4.RC4C
 
 import           Foreign
 import           Foreign.C
+-- import           Foreign.C.Types
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Internal as B
 import qualified Data.ByteString.Char8 as BC8
@@ -42,6 +43,8 @@ initCtx :: [Word8] -- ^ The key, a bytestring of length 40
 initCtx key =
   unsafePerformIO $ do
     -- Allocate the permutation, and obtain a pointer to it.
+    -- Since the pointer is converted using peekSCStringLen, this
+    -- pointer needs only local duration
     allocaBytes 256 $ \perm_ptr -> do
       B.useAsCString (B.pack key) $ \key_ptr -> do
         perm <- c_initCtx key_ptr perm_ptr
@@ -72,31 +75,36 @@ encrypt ctx clearText =
   unsafePerformIO $ do
     let len = B.length clearText
     -- Allocate an int, and obtain a pointer to it.
+    -- This pointer has local duration only
     alloca $ \(iptr :: Ptr CInt) -> do
       -- Allocate another int, and obtain a pointer to it.
+      -- This pointer has local duration only
       alloca $ \(jptr :: Ptr CInt) -> do
-        -- Allocate the output buffer
-        allocaBytes len $ \outptr -> do
-          let Ctx { permutation = perm, ival = i, jval = j } = ctx
-          -- Convert permutation to pointer for the C call          
-          let (perm_ptr, _perm_off, _perm_len) = B.toForeignPtr perm
-          withForeignPtr perm_ptr $ \(cperm :: Ptr Word8) -> do
-            let (clear_ptr, _clear_off, _clear_len) = B.toForeignPtr clearText
-            withForeignPtr clear_ptr $ \cclear -> do
-              -- Convert i and j values to pointers for the C call
-              poke iptr (fromIntegral i)
-              poke jptr (fromIntegral j)
-              -- Actually do the encryption
-              outptr' <- c_rc4 cperm iptr jptr cclear (fromIntegral len) outptr
-              -- Retrieve the new i and j values
-              i' <- peek iptr
-              j' <- peek jptr
-              -- Convert C pointer to bytestring for the cipher text
-              foutptr <- newForeignPtr_ outptr'
-              -- Return the output context and cipher text
-              return ( Ctx perm (fromIntegral i') (fromIntegral j')
-                     , B.fromForeignPtr foutptr 0 len
-                     )
+        -- Allocate the output buffer. This buffer has longer
+        -- duration, so it gets a finalizer later
+        outptr <- mallocBytes len
+        let Ctx { permutation = perm, ival = i, jval = j } = ctx
+        -- Convert permutation to pointer for the C call          
+        let (perm_ptr, _perm_off, _perm_len) = B.toForeignPtr perm
+        -- Pointer to the permutation used only locally
+        withForeignPtr perm_ptr $ \(cperm :: Ptr Word8) -> do
+          let (clear_ptr, _clear_off, _clear_len) = B.toForeignPtr clearText
+          -- Pointer to the clear text used only locally
+          withForeignPtr clear_ptr $ \cclear -> do
+            -- Convert i and j values to pointers for the C call
+            poke iptr (fromIntegral i)
+            poke jptr (fromIntegral j)
+            -- Actually do the encryption
+            outptr' <- c_rc4 cperm iptr jptr cclear (fromIntegral len) outptr
+            -- Retrieve the new i and j values
+            i' <- peek iptr
+            j' <- peek jptr
+            -- Associate a finalizer with the cipher text
+            foutptr <- newForeignPtr finalizerFree outptr'
+            -- Return the output context and cipher text
+            return ( Ctx perm (fromIntegral i') (fromIntegral j')
+                   , B.fromForeignPtr foutptr 0 len
+                   )
 
 -- | RC4 decryption. For RC4, decrypt = encrypt
 --
