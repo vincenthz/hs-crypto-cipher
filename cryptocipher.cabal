@@ -61,7 +61,6 @@ Library
   if flag(rc4c)
     Exposed-modules: Crypto.Cipher.RC4.RC4C
     C-sources:       cbits/rc4/RC4CLib.c
-    CC-options:      -mssse3 -maes -std=c99 -O4
 
 Test-Suite test-cryptocipher
   type:              exitcode-stdio-1.0
