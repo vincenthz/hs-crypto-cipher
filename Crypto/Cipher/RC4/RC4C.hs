@@ -15,50 +15,35 @@ import           System.IO.Unsafe
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Internal as B
 import qualified Data.ByteString.Char8 as BC8
+import Control.Applicative ((<$>))
 
 ----------------------------------------------------------------------
 
 -- | The encryption context for RC4
-data Ctx = Ctx
-    { -- | The permutation, or S-box, controlling the encryptor
-      permutation :: B.ByteString
-      -- | An index into the permutation
-    , ival :: Int
-      -- | Another index into the permutation
-    , jval :: Int
-    }
+data Ctx = Ctx B.ByteString
 
 instance Show Ctx where
-    show (Ctx _perm i j) = "(" ++ show i ++ ", " ++ show j ++ ")"
+    show _ = "RC4.Ctx"
 
 -- | C Call for initializing the encryptor
 foreign import ccall unsafe "RC4.h initCtx"
-    c_initCtx :: Ptr CChar ->   -- ^ The encryption key
-                 Ptr CChar ->   -- ^ The permutation, pre-allocated
-                 IO (Ptr CChar) -- ^ The output permutation
+    c_initCtx :: Ptr Word8 ->   -- ^ The encryption key
+                 Word32    ->   -- ^ The key length
+                 Ptr Word8 ->   -- ^ The permutation, pre-allocated
+                 IO ()
 
 -- | Haskell wrapper for initializing the permutation
-initCtx :: [Word8] -- ^ The key, a bytestring of length 40
-        -> Ctx     -- ^ The encryption context
-initCtx key =
-  unsafePerformIO $ do
-    -- Allocate the permutation, and obtain a pointer to it.
-    -- Since the pointer is converted using peekSCStringLen, this
-    -- pointer needs only local duration
-    allocaBytes 256 $ \perm_ptr -> do
-      B.useAsCString (B.pack key) $ \key_ptr -> do
-        perm <- c_initCtx key_ptr perm_ptr
-        haskellPerm <- peekCStringLen (perm, 256)
-        return (Ctx (BC8.pack haskellPerm) 0 0)
+initCtx :: B.ByteString -- ^ The key, a bytestring of length 40
+        -> Ctx          -- ^ The encryption context
+initCtx key = B.inlinePerformIO $
+    Ctx <$> (B.create 264 $ \ctx -> B.useAsCStringLen key $ \(keyPtr,keyLen) -> c_initCtx (castPtr keyPtr) (fromIntegral keyLen) ctx)
 
 foreign import ccall unsafe "RC4.h rc4"
-    c_rc4 :: Ptr Word8      -- ^ Pointer to the permutation
-          -> Ptr CInt       -- ^ Pointer to the i index
-          -> Ptr CInt       -- ^ Pointer to the j index
+    c_rc4 :: Ptr Ctx        -- ^ Pointer to the permutation
           -> Ptr Word8      -- ^ Pointer to the clear text
-          -> CInt           -- ^ Length of the clear text
-          -> Ptr Word8      -- ^ Cipher text buffer
-          -> IO (Ptr Word8) -- ^ Returned pointer to the output text
+          -> Word32         -- ^ Length of the clear text
+          -> Ptr Word8      -- ^ Output buffer
+          -> IO ()
 
 -- | RC4 encryption
 --   Since the context is both an input and an output, this is a
@@ -71,18 +56,10 @@ encrypt :: Ctx                 -- ^ The encryption context
         -> B.ByteString        -- ^ The clear (red) text
         -> (Ctx, B.ByteString) -- ^ The new encryption context, and
                                --   the cipher (black) text
-encrypt ctx clearText =
-  unsafePerformIO $ do
-    let len = B.length clearText
-    -- Allocate an int, and obtain a pointer to it.
-    -- This pointer has local duration only
-    alloca $ \(iptr :: Ptr CInt) -> do
-      -- Allocate another int, and obtain a pointer to it.
-      -- This pointer has local duration only
-      alloca $ \(jptr :: Ptr CInt) -> do
-        -- Allocate the output buffer. This buffer has longer
-        -- duration, so it gets a finalizer later
-        outptr <- mallocBytes len
+encrypt cctx clearText = B.inlinePerformIO $
+    undefined
+{-
+    where len = B.length clearText
         let Ctx { permutation = perm, ival = i, jval = j } = ctx
         -- Convert permutation to pointer for the C call          
         let (perm_ptr, _perm_off, _perm_len) = B.toForeignPtr perm
@@ -105,6 +82,7 @@ encrypt ctx clearText =
             return ( Ctx perm (fromIntegral i') (fromIntegral j')
                    , B.fromForeignPtr foutptr 0 len
                    )
+-}
 
 -- | RC4 decryption. For RC4, decrypt = encrypt
 --
