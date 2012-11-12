@@ -30,7 +30,7 @@ Library
                    , ghc-prim
                    , primitive
                    , crypto-api >= 0.5
-                   , crypto-pubkey-types >= 0.1 && < 0.2
+                   , crypto-pubkey-types >= 0.2 && < 0.3
                    , tagged
                    , cereal
   Exposed-modules:   Crypto.Cipher.RC4

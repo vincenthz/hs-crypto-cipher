@@ -119,20 +119,19 @@ generate rng size e = do
 	case inverse e phi of
 		Nothing -> generate rng' size e
 		Just d  -> do
+			let pub = PublicKey
+				{ public_size = size
+				, public_n    = n
+				, public_e    = e
+				}
 			let priv = PrivateKey
-				{ private_size = size
-				, private_n    = n
+				{ private_pub  = pub
 				, private_d    = d
 				, private_p    = p
 				, private_q    = q
 				, private_dP   = d `mod` (p-1)
 				, private_dQ   = d `mod` (q-1)
 				, private_qinv = fromJust $ inverse q p -- q and p are coprime, so fromJust is safe.
-				}
-			let pub = PublicKey
-				{ public_size = size
-				, public_n    = n
-				, public_e    = e
 				}
 			Right ((pub, priv), rng')
 	where
