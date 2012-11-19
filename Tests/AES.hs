@@ -41,14 +41,14 @@ instance Arbitrary Key128 where
 instance Arbitrary Message where
     arbitrary = choose (1,102) >>= \sz -> Message <$> arbitraryBS (16*sz)
 
-ebcTests l (Key128 k, Message m) = (== 1) $ length $ nub $ map (\f -> f k m) l
+ecbTests l (Key128 k, Message m) = (== 1) $ length $ nub $ map (\f -> f k m) l
 cbcTests l (IV iv, Key128 k, Message m) = (== 1) $ length $ nub $ map (\f -> f k iv m) l
 
 unright (Right r) = r
 unright (Left e) = error e
 
 aesTests =
-    [ testProperty "ECB Encryption Equivalent" $ ebcTests
+    [ testProperty "ECB Encryption Equivalent" $ ecbTests
         [ (\k m -> AESHs.encrypt (unright $ AESHs.initKey128 k) m)
 #ifdef HAVE_AESNI
         , (\k m -> AESNI.encrypt (AESNI.initKey128 k) m)
@@ -60,7 +60,7 @@ aesTests =
         , (\k iv m -> AESNI.encryptCBC (AESNI.initKey128 k) iv m)
 #endif
         ]
-    , testProperty "ECB Decryption Equivalent" $ ebcTests
+    , testProperty "ECB Decryption Equivalent" $ ecbTests
         [ (\k m -> AESHs.decrypt (unright $ AESHs.initKey128 k) m)
 #ifdef HAVE_AESNI
         , (\k m -> AESNI.decrypt (AESNI.initKey128 k) m)
