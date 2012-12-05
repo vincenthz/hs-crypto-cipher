@@ -128,7 +128,7 @@ encryptCBC key iv b
 				let r = coreEncrypt key $ B.pack $ B.zipWith xor iv' x in
 				r : encryptIter r xs
 
-{- | encrypt using simple EBC mode -}
+{- | encrypt using simple ECB mode -}
 encrypt :: Key -> B.ByteString -> B.ByteString
 encrypt key b
 	| B.length b `mod` 16 /= 0 = error "invalid data length"
@@ -147,7 +147,7 @@ decryptCBC key iv b
 				let r = B.pack $ B.zipWith xor iv' $ coreDecrypt key x in
 				r : decryptIter x xs
 
-{- | decrypt using simple EBC mode -}
+{- | decrypt using simple ECB mode -}
 decrypt :: Key -> B.ByteString -> B.ByteString
 decrypt key b
 	| B.length b `mod` 16 /= 0 = error "invalid data length"
