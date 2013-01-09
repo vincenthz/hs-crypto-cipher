@@ -30,7 +30,7 @@ import Number.Serialize
 -}
 -- ciphers/Kexch
 import AES (aesTests)
-import qualified Crypto.Cipher.AES.Haskell as AES
+import qualified Crypto.Cipher.AES as AES
 import qualified Crypto.Cipher.RSA as RSA
 import qualified Crypto.Cipher.DSA as DSA
 import qualified Crypto.Cipher.DH as DH
@@ -235,31 +235,31 @@ instance Arbitrary AES256Message where
 		                       (B.pack $ map fromIntegral ws)
 
 
-prop_ecb_valid k msg = AES.decrypt k (AES.encrypt k msg) == msg
-prop_cbc_valid k iv msg = AES.decryptCBC k iv (AES.encryptCBC k iv msg) == msg
+prop_ecb_valid k msg = AES.decryptECB k (AES.encryptECB k msg) == msg
+prop_cbc_valid k iv msg = AES.decryptCBC k (AES.IV iv) (AES.encryptCBC k (AES.IV iv) msg) == msg
 
 prop_aes128_ecb_valid (AES128Message key _ msg) =
-	let (Right k) = AES.initKey128 key in
+	let k = AES.initKey key in
 	prop_ecb_valid k msg
 
 prop_aes192_ecb_valid (AES192Message key _ msg) =
-	let (Right k) = AES.initKey192 key in
+	let k = AES.initKey key in
 	prop_ecb_valid k msg
 
 prop_aes256_ecb_valid (AES256Message key _ msg) =
-	let (Right k) = AES.initKey256 key in
+	let k = AES.initKey key in
 	prop_ecb_valid k msg
 
 prop_aes128_cbc_valid (AES128Message key iv msg) =
-	let (Right k) = AES.initKey128 key in
+	let k = AES.initKey key in
 	prop_cbc_valid k iv msg
 
 prop_aes192_cbc_valid (AES192Message key iv msg) =
-	let (Right k) = AES.initKey192 key in
+	let k = AES.initKey key in
 	prop_cbc_valid k iv msg
 
 prop_aes256_cbc_valid (AES256Message key iv msg) =
-	let (Right k) = AES.initKey256 key in
+	let k = AES.initKey key in
 	prop_cbc_valid k iv msg
 
 {-----------------------------------------------------------------------------------------------}

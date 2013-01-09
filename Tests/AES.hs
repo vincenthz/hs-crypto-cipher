@@ -6,10 +6,7 @@ module AES (aesTests) where
 -- for test suite. to run test with AESni, uncomment the following
 -- #define HAVE_AESNI
 
-import qualified Crypto.Cipher.AES.Haskell as AESHs
-#ifdef HAVE_AESNI
-import qualified Crypto.Cipher.AES.X86NI as AESNI
-#endif
+import qualified Crypto.Cipher.AES as AESHs
 
 import Crypto.Classes
 import qualified Crypto.Modes as CAPI
@@ -44,32 +41,17 @@ instance Arbitrary Message where
 ecbTests l (Key128 k, Message m) = (== 1) $ length $ nub $ map (\f -> f k m) l
 cbcTests l (IV iv, Key128 k, Message m) = (== 1) $ length $ nub $ map (\f -> f k iv m) l
 
-unright (Right r) = r
-unright (Left e) = error e
-
 aesTests =
     [ testProperty "ECB Encryption Equivalent" $ ecbTests
-        [ (\k m -> AESHs.encrypt (unright $ AESHs.initKey128 k) m)
-#ifdef HAVE_AESNI
-        , (\k m -> AESNI.encrypt (AESNI.initKey128 k) m)
-#endif
+        [ (\k m -> AESHs.encryptECB (AESHs.initKey k) m)
         ]
     , testProperty "CBC Encryption Equivalent" $ cbcTests
-        [ (\k iv m -> AESHs.encryptCBC (unright $ AESHs.initKey128 k) iv m)
-#ifdef HAVE_AESNI
-        , (\k iv m -> AESNI.encryptCBC (AESNI.initKey128 k) iv m)
-#endif
+        [ (\k iv m -> AESHs.encryptCBC (AESHs.initKey k) (AESHs.IV iv) m)
         ]
     , testProperty "ECB Decryption Equivalent" $ ecbTests
-        [ (\k m -> AESHs.decrypt (unright $ AESHs.initKey128 k) m)
-#ifdef HAVE_AESNI
-        , (\k m -> AESNI.decrypt (AESNI.initKey128 k) m)
-#endif
+        [ (\k m -> AESHs.decryptECB (AESHs.initKey k) m)
         ]
     , testProperty "CBC Decryption Equivalent" $ cbcTests
-        [ (\k iv m -> AESHs.decryptCBC (unright $ AESHs.initKey128 k) iv m)
-#ifdef HAVE_AESNI
-        , (\k iv m -> AESNI.decryptCBC (AESNI.initKey128 k) iv m)
-#endif
+        [ (\k iv m -> AESHs.decryptCBC (AESHs.initKey k) (AESHs.IV iv) m)
         ]
     ]

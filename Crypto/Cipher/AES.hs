@@ -1,3 +1,4 @@
+{-# LANGUAGE PackageImports #-}
 -- |
 -- Module      : Crypto.Cipher.AES
 -- License     : BSD-style
@@ -6,7 +7,7 @@
 -- Portability : Good
 
 module Crypto.Cipher.AES
-	( module Crypto.Cipher.AES.Haskell
+	( module Crypto.Cipher.AES
 	) where
 
-import Crypto.Cipher.AES.Haskell
+import "cipher-aes" Crypto.Cipher.AES

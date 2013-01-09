@@ -12,21 +12,17 @@ import qualified Data.ByteString.Char8 as BC
 
 import Data.Word
 
-import qualified Crypto.Cipher.AES.Haskell as AES
-#ifdef HAVE_AESNI
-import qualified Crypto.Cipher.AES.X86NI as AESNI
-#endif
+import qualified Crypto.Cipher.AES as AES
 import qualified Crypto.Cipher.Blowfish as Blowfish
 import qualified Crypto.Cipher.Camellia as Camellia
 import qualified Crypto.Cipher.RC4 as RC4
 
 encryptStream fi fc key plaintext = B.unpack $ snd $ fc (fi key) plaintext
 
-encryptBlock fi fc key plaintext =
-	let e = fi (B.pack key) in
-	case e of
-		Right k -> B.unpack $ fc k plaintext
-		Left  e -> error e
+encryptBlock fi fc key plaintext = B.unpack $ fc (fi $ B.pack key) plaintext
+
+unright (Right r) = r
+unright (Left e) = error e
 
 wordify :: [Char] -> [Word8]
 wordify = map (toEnum . fromEnum)
@@ -176,9 +172,9 @@ vectors_aes256_dec =
 	  )
 	]
 
-aes128InitKey = AES.initKey128
-aes192InitKey = AES.initKey192
-aes256InitKey = AES.initKey256
+aes128InitKey = AES.initKey
+aes192InitKey = AES.initKey
+aes256InitKey = AES.initKey
 
 vectors_rc4 =
 	[ (wordify "Key", "Plaintext", [ 0xBB,0xF3,0x16,0xE8,0xD9,0x40,0xAF,0x0A,0xD3 ])
@@ -234,21 +230,16 @@ vectors_blowfish =
 vectors =
 	[ ("RC4",        vectors_rc4,         encryptStream RC4.initCtx RC4.encrypt)
 	-- AES haskell implementation
-	, ("AES 128 Enc", vectors_aes128_enc,  encryptBlock aes128InitKey AES.encrypt)
-	, ("AES 192 Enc", vectors_aes192_enc,  encryptBlock aes192InitKey AES.encrypt)
-	, ("AES 256 Enc", vectors_aes256_enc,  encryptBlock aes256InitKey AES.encrypt)
-	, ("AES 128 Dec", vectors_aes128_dec,  encryptBlock aes128InitKey AES.decrypt)
-	, ("AES 192 Dec", vectors_aes192_dec,  encryptBlock aes192InitKey AES.decrypt)
-	, ("AES 256 Dec", vectors_aes256_dec,  encryptBlock aes256InitKey AES.decrypt)
-#ifdef HAVE_AESNI
-	-- AES ni implementation
-	, ("AESNI 128 Enc", vectors_aes128_enc,  encryptBlock (Right . AESNI.initKey128) AESNI.encrypt)
-	, ("AESNI 128 Dec", vectors_aes128_dec,  encryptBlock (Right . AESNI.initKey128) AESNI.decrypt)
-#endif
+	, ("AES 128 Enc", vectors_aes128_enc,  encryptBlock aes128InitKey AES.encryptECB)
+	, ("AES 192 Enc", vectors_aes192_enc,  encryptBlock aes192InitKey AES.encryptECB)
+	, ("AES 256 Enc", vectors_aes256_enc,  encryptBlock aes256InitKey AES.encryptECB)
+	, ("AES 128 Dec", vectors_aes128_dec,  encryptBlock aes128InitKey AES.decryptECB)
+	, ("AES 192 Dec", vectors_aes192_dec,  encryptBlock aes192InitKey AES.decryptECB)
+	, ("AES 256 Dec", vectors_aes256_dec,  encryptBlock aes256InitKey AES.decryptECB)
     -- Blowfish implementation
-    , ("Blowfish",   vectors_blowfish,    encryptBlock Blowfish.initKey Blowfish.encrypt)
+    , ("Blowfish",   vectors_blowfish,    encryptBlock (unright . Blowfish.initKey) Blowfish.encrypt)
 	-- Camellia implementation
-	, ("Camellia",   vectors_camellia128, encryptBlock Camellia.initKey128 Camellia.encrypt)
+	, ("Camellia",   vectors_camellia128, encryptBlock (unright . Camellia.initKey128) Camellia.encrypt)
 	]
 
 katTests = map makeTests vectors

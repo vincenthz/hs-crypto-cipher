@@ -13,37 +13,24 @@ import Control.Monad.Trans
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as L
 
-import qualified Crypto.Cipher.AES.Haskell as AES
-#ifdef HAVE_AESNI
-import qualified Crypto.Cipher.AES.X86NI as AESNI
-#endif
+import qualified Crypto.Cipher.AES as AES
 import qualified Crypto.Cipher.RC4 as RC4
 import qualified Crypto.Cipher.Blowfish as Blowfish
 import qualified Crypto.Cipher.Camellia as Camellia
 
 import Crypto.Classes
-import qualified Crypto.Modes as CAPI
 
-(Right key128) = AES.initKey128 $ B.replicate 16 0
-aesEncrypt128 = AES.encrypt key128
-aesEncrypt128CBC = AES.encryptCBC key128 (B.replicate 16 0)
+key128 = AES.initKey $ B.replicate 16 0
+aesEncrypt128 = AES.encryptECB key128
+aesEncrypt128CBC = AES.encryptCBC key128 (AES.IV $ B.replicate 16 0)
 
-(Right key192) = AES.initKey192 $ B.replicate 24 0
-aesEncrypt192 = AES.encrypt key192
-aesEncrypt192CBC = AES.encryptCBC key192 (B.replicate 16 0)
-(Right key256) = AES.initKey256 $ B.replicate 32 0
-aesEncrypt256 = AES.encrypt key256
-aesEncrypt256CBC = AES.encryptCBC key256 (B.replicate 16 0)
+key192 = AES.initKey $ B.replicate 24 0
+aesEncrypt192 = AES.encryptECB key192
+aesEncrypt192CBC = AES.encryptCBC key192 (AES.IV $ B.replicate 16 0)
 
-(Just capi_key128) = buildKey (B.replicate 16 0) :: Maybe AES.AES128
-aesEncrypt128CBC_capi = fst . CAPI.cbc' capi_key128 CAPI.zeroIV
-
-#ifdef HAVE_AESNI
-key128_ni = AESNI.initKey128 $ B.replicate 16 0
-aesniEncrypt128 = AESNI.encrypt key128_ni
-
-aesniEncrypt128CBC = AESNI.encryptCBC key128_ni (B.replicate 16 0)
-#endif
+key256 = AES.initKey $ B.replicate 32 0
+aesEncrypt256 = AES.encryptECB key256
+aesEncrypt256CBC = AES.encryptCBC key256 (AES.IV $ B.replicate 16 0)
 
 (Right blowfishKey) = Blowfish.initKey $ B.empty
 blowfishEncrypt = Blowfish.encrypt blowfishKey
@@ -97,10 +84,6 @@ main = withConfig defaultConfig $ do
 		, ("Camellia128", camelliaEncrypt128)
 		, ("AES128"     , aesEncrypt128)
 		, ("AES128-CBC" , aesEncrypt128CBC)
-#ifdef HAVE_AESNI
-		, ("AES128-ni"  , aesniEncrypt128)
-		, ("AES128ni-CBC" , aesniEncrypt128CBC)
-#endif
 		-- , ("AES128-CBC-capi", aesEncrypt128CBC_capi)
 		, ("AES192"     , aesEncrypt192)
 		, ("AES192-CBC" , aesEncrypt192CBC)
