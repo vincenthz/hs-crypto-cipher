@@ -7,7 +7,7 @@
 -- Stability   : experimental
 -- Portability : Good
 --
-module Crypto.Cipher.RSA
+module Crypto.Cipher.RSA {-# DEPRECATED "Use crypto-pubkey Crypto.PubKey.RSA" #-}
 	( Error(..)
 	, PublicKey(..)
 	, PrivateKey(..)

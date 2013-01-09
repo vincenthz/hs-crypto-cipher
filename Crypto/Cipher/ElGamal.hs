@@ -11,7 +11,7 @@
 -- TODO: provide a mapping between integer and ciphertext
 --       generate numbers correctly
 --
-module Crypto.Cipher.ElGamal
+module Crypto.Cipher.ElGamal {-# DEPRECATED "Use crypto-pubkey Crypto.PubKey.ElGamal" #-}
 	( Params
 	, PublicNumber
 	, PrivateNumber

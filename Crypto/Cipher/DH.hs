@@ -7,7 +7,7 @@
 -- Stability   : experimental
 -- Portability : Good
 --
-module Crypto.Cipher.DH
+module Crypto.Cipher.DH {-# DEPRECATED "Use crypto-pubkey Crypto.PubKey.DH" #-}
 	( Params
 	, PublicNumber
 	, PrivateNumber

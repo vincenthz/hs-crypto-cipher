@@ -6,7 +6,7 @@
 -- Portability : Good
 --
 
-module Crypto.Cipher.DSA
+module Crypto.Cipher.DSA {-# DEPRECATED "Use crypto-pubkey Crypto.PubKey.DSA" #-}
 	( Error(..)
 	, Params
 	, Signature
