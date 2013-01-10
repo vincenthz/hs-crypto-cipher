@@ -16,7 +16,6 @@ import Data.Bits
 import Data.Char
 import Data.Word
 import qualified Data.ByteString as B
-import Data.Tagged
 import Data.Serialize
 
 type Pbox = Vector Word32
