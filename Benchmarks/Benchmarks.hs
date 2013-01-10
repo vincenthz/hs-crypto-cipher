@@ -38,8 +38,8 @@ blowfishEncrypt = Blowfish.encrypt blowfishKey
 (Right camelliaKey128) = Camellia.initKey128 $ B.replicate 16 0
 camelliaEncrypt128 = Camellia.encrypt camelliaKey128
 
-rc4Key = RC4.initCtx $ replicate 16 0
-rc4Encrypt = snd . RC4.encrypt rc4Key 
+rc4Key = RC4.initCtx $ B.replicate 16 0
+rc4Encrypt = snd . RC4.combine rc4Key
 
 b16 f   = whnf f $ B.replicate 16 0
 b32 f   = whnf f $ B.replicate 32 0

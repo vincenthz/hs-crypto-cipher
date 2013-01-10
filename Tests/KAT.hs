@@ -17,7 +17,7 @@ import qualified Crypto.Cipher.Blowfish as Blowfish
 import qualified Crypto.Cipher.Camellia as Camellia
 import qualified Crypto.Cipher.RC4 as RC4
 
-encryptStream fi fc key plaintext = B.unpack $ snd $ fc (fi key) plaintext
+encryptStream fi fc key plaintext = B.unpack $ snd $ fc (fi $ B.pack key) plaintext
 
 encryptBlock fi fc key plaintext = B.unpack $ fc (fi $ B.pack key) plaintext
 
