@@ -30,7 +30,7 @@ data Key = Key { unKey :: Vector Word32 }
 
 encrypt, decrypt :: Key -> B.ByteString -> B.ByteString
 encrypt = cipher . selectEncrypt . bfState . initBoxes
-decrypt = cipher . selectEncrypt . bfState . initBoxes
+decrypt = cipher . selectDecrypt . bfState . initBoxes
 
 instance Serialize Blowfish where
     put = put . bfKey
