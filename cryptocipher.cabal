@@ -1,12 +1,12 @@
 Name:                cryptocipher
 Version:             0.4.0
-Description:         Symmetrical Block, Stream and PubKey Ciphers
+Description:         Symmetrical block and stream ciphers.
 License:             BSD3
 License-file:        LICENSE
 Copyright:           Vincent Hanquez <vincent@snarc.org>
 Author:              Vincent Hanquez <vincent@snarc.org>
 Maintainer:          Vincent Hanquez <vincent@snarc.org>
-Synopsis:            Symmetrical Block, Stream and PubKey Ciphers
+Synopsis:            Symmetrical block and stream ciphers.
 Category:            Cryptography
 Build-Type:          Simple
 Homepage:            http://github.com/vincenthz/hs-cryptocipher
