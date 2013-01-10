@@ -10,7 +10,6 @@
 
 module Crypto.Cipher.Blowfish (Blowfish, Key, initKey, encrypt, decrypt) where
 
-import Crypto.Classes
 import Data.Vector (Vector, (!), (//))
 import qualified Data.Vector as V
 import Data.Bits
@@ -45,13 +44,6 @@ instance Serialize Key where
         case keyFromByteString bs of
             Right k -> return k
             Left _ -> fail "Invalid raw key material."
-
-instance BlockCipher Blowfish where
-	blockSize    = Tagged 64
-	encryptBlock = cipher . selectEncrypt . bfState
-	decryptBlock = cipher . selectDecrypt . bfState
-	buildKey     = either (const Nothing) (Just . initBoxes) . initKey
-	keyLength    = Tagged 448 -- Actually 1 through 448 inclusive.
 
 selectEncrypt, selectDecrypt :: BlowfishState -> (Pbox, BlowfishState)
 selectEncrypt x@(BF p _ _ _ _) = (p, x)
