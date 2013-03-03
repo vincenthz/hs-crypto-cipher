@@ -27,12 +27,14 @@ Library
                    , primitive
                    , cipher-aes
                    , cipher-rc4
+                   , Crypto == 4.2.*
                    , crypto-api >= 0.5
                    , cereal
   Exposed-modules:   Crypto.Cipher.RC4
                      Crypto.Cipher.AES
                      Crypto.Cipher.Blowfish
                      Crypto.Cipher.Camellia
+                     Crypto.Cipher.TripleDES
   ghc-options:       -Wall
 
 Test-Suite test-cryptocipher
