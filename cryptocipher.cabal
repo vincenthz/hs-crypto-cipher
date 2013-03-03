@@ -33,6 +33,8 @@ Library
                      Crypto.Cipher.AES
                      Crypto.Cipher.Blowfish
                      Crypto.Cipher.Camellia
+                     Crypto.Cipher.TripleDES
+                     Crypto.Cipher.DES
   ghc-options:       -Wall
 
 Test-Suite test-cryptocipher
