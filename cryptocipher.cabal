@@ -1,5 +1,5 @@
 Name:                cryptocipher
-Version:             0.4.0
+Version:             0.5.0
 Description:         Symmetrical block and stream ciphers.
 License:             BSD3
 License-file:        LICENSE
@@ -28,22 +28,11 @@ Library
                    , cipher-aes
                    , cipher-rc4
                    , crypto-api >= 0.5
-                   , crypto-pubkey-types >= 0.2 && < 0.3
                    , cereal
   Exposed-modules:   Crypto.Cipher.RC4
                      Crypto.Cipher.AES
                      Crypto.Cipher.Blowfish
                      Crypto.Cipher.Camellia
-                     Crypto.Cipher.RSA
-                     Crypto.Cipher.DSA
-                     Crypto.Cipher.DH
-  other-modules:     Number.ModArithmetic
-                     Number.Serialize
-                     Number.Generate
-                     Number.Basic
-                     Number.Polynomial
-                     Number.Prime
-                     Crypto.Cipher.ElGamal
   ghc-options:       -Wall
 
 Test-Suite test-cryptocipher

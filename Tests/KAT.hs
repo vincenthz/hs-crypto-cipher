@@ -228,7 +228,7 @@ vectors_blowfish =
     ]
 
 vectors =
-	[ ("RC4",        vectors_rc4,         encryptStream RC4.initCtx RC4.encrypt)
+	[ ("RC4",        vectors_rc4,         encryptStream RC4.initCtx RC4.combine)
 	-- AES haskell implementation
 	, ("AES 128 Enc", vectors_aes128_enc,  encryptBlock aes128InitKey AES.encryptECB)
 	, ("AES 192 Enc", vectors_aes192_enc,  encryptBlock aes192InitKey AES.encryptECB)
