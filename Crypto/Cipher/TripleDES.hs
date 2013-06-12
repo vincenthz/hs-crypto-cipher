@@ -12,10 +12,9 @@ module Crypto.Cipher.TripleDES
     ) where
 
 import Control.Applicative ((<$>))
-import Control.Monad (replicateM)
 import Data.Serialize (Get, Put, Serialize(..), runGet, runPut,
                        getWord8, putWord64le)
-import Data.Word (Word64)
+import Data.Word (Word8, Word64)
 import Foreign (castPtr, peek)
 import System.IO.Unsafe (unsafePerformIO)
 import Data.ByteString.Unsafe (unsafeUseAsCString)
@@ -23,8 +22,7 @@ import qualified Data.ByteString as B
 import qualified Data.Bits as Bits
 
 import Crypto.Classes (BlockCipher(..))
-import Codec.Utils (Octet, fromOctets)
-import qualified Codec.Encryption.DES as DES
+import qualified Crypto.Cipher.DES as DES
 
 data DesEee3Key = DesEee3Key Word64 Word64 Word64 -- three different keys
     deriving (Show, Eq)
@@ -44,8 +42,8 @@ triplePut f s t = putWord64le f >> putWord64le s >> putWord64le t
 doublePut :: Word64 -> Word64 -> Put
 doublePut f s = putWord64le f >> putWord64le s
 
-getFixedParityOctet :: Get Octet
-getFixedParityOctet = do
+getFixedParityByte :: Get Word8
+getFixedParityByte = do
     sourceWord <- getWord8
     return $ case odd(Bits.popCount sourceWord) of
         True  -> Bits.clearBit sourceWord lsb
@@ -55,9 +53,11 @@ getFixedParityOctet = do
 
 getFixedParityWord64le :: Get Word64
 getFixedParityWord64le =
-    fromOctets octetsNumber <$> replicateM octetsNumber getFixedParityOctet
+    sum <$> sequence [ shiftWord8Toword64 pos <$> getFixedParityByte
+                     | pos <- [7,6..0] ]
   where
-    octetsNumber = 8 :: Int
+    shiftWord8Toword64 :: Int -> Word8 -> Word64
+    shiftWord8Toword64 pos = flip Bits.shiftL (pos * 8) . fromIntegral
 
 tripleGet :: Get (Word64, Word64, Word64)
 tripleGet = do
@@ -91,7 +91,6 @@ instance Serialize DesEde2Key where
     put (DesEde2Key f s) = doublePut f s
     get = uncurry DesEde2Key <$> doubleGet
 
--- TODO: some docs
 bsToWord64 :: B.ByteString -> Word64
 bsToWord64 bs = unsafePerformIO $ unsafeUseAsCString bs $ peek . castPtr
 

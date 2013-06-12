@@ -29,7 +29,6 @@ import qualified Crypto.Cipher.TripleDES as TripleDES
 import qualified Crypto.Classes as CryptoAPI
 import qualified Crypto.Types as CryptoTypes
 import Crypto.Random
-import Crypto.Random
 import KAT
 
 {-----------------------------------------------------------------------------------------------}
