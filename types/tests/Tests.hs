@@ -12,6 +12,7 @@ data XorCipher = XorCipher
 
 instance Cipher XorCipher where
     cipherInit _    = XorCipher
+    cipherName _    = "xor"
     cipherKeySize _ = Just 0
 
 instance BlockCipher XorCipher where

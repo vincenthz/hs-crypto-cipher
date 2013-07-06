@@ -37,6 +37,8 @@ import Data.Bits (shiftR, xor)
 class Cipher cipher where
     -- | Initialize a cipher context from a key
     cipherInit    :: Key cipher -> cipher
+    -- | Cipher name
+    cipherName    :: cipher -> String
     -- | return the size of the key required for this cipher.
     -- Some cipher accept any size for key
     cipherKeySize :: cipher -> Maybe Int
