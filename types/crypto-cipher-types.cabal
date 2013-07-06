@@ -10,7 +10,7 @@ Maintainer:          vincent@snarc.org
 Category:            Cryptography
 Stability:           experimental
 Build-Type:          Simple
-Homepage:            http://github.com/vincenthz/hs-crypto-cipher-types
+Homepage:            http://github.com/vincenthz/hs-crypto-cipher
 Cabal-Version:       >=1.8
 data-files:          README.md
 
@@ -40,4 +40,5 @@ Test-Suite test-crypto-cipher-types
 
 source-repository head
   type: git
-  location: git://github.com/vincenthz/hs-crypto-cipher-types
+  location: git://github.com/vincenthz/hs-crypto-cipher
+  subdir: types
