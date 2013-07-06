@@ -84,6 +84,19 @@ class Cipher cipher => BlockCipher cipher where
     ctrCombine :: cipher -> IV cipher -> ByteString -> ByteString
     ctrCombine = ctrCombineGeneric
 
+{-
+    -- | encrypt using the XTS mode.
+    --
+    -- input need to be a multiple of the blocksize
+    xtsEncrypt :: cipher -> IV cipher -> ByteString -> ByteString
+    xtsEncrypt = xtsEncryptGeneric
+    -- | decrypt using the XTS mode.
+    --
+    -- input need to be a multiple of the blocksize
+    xtsDecrypt :: cipher -> IV cipher -> ByteString -> ByteString
+    xtsDecrypt = xtsDecryptGeneric
+-}
+
 -- | a Key parametrized by the cipher
 newtype Key c = Key SecureMem deriving (Eq)
 

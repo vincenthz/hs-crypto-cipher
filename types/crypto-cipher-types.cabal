@@ -24,7 +24,7 @@ Library
 
 Test-Suite test-crypto-cipher-types
   type:              exitcode-stdio-1.0
-  hs-source-dirs:    tests
+  hs-source-dirs:    tests ../tests
   Main-is:           Tests.hs
   Build-Depends:     base >= 3 && < 5
                    , bytestring
