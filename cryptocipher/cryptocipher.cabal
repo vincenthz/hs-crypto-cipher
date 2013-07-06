@@ -68,3 +68,4 @@ Executable           Benchmarks
 source-repository head
   type:     git
   location: git://github.com/vincenthz/hs-crypto-cipher
+  subdir:   cryptocipher
