@@ -9,7 +9,7 @@ Maintainer:          Vincent Hanquez <vincent@snarc.org>
 Synopsis:            Symmetrical block and stream ciphers.
 Category:            Cryptography
 Build-Type:          Simple
-Homepage:            http://github.com/vincenthz/hs-cryptocipher
+Homepage:            http://github.com/vincenthz/hs-crypto-cipher
 Cabal-Version:       >=1.8
 Extra-Source-Files:  Tests/*.hs
                      cbits/aes/aes.h
@@ -68,4 +68,4 @@ Executable           Benchmarks
 
 source-repository head
   type:     git
-  location: git://github.com/vincenthz/hs-cryptocipher
+  location: git://github.com/vincenthz/hs-crypto-cipher
