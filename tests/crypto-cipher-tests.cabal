@@ -12,7 +12,6 @@ Stability:           experimental
 Build-Type:          Simple
 Homepage:            http://github.com/vincenthz/hs-crypto-cipher
 Cabal-Version:       >=1.8
-data-files:          README.md
 
 Library
   Exposed-modules:   Crypto.Cipher.Tests
