@@ -38,6 +38,9 @@ import System.Exit
 
 import Data.Char (toUpper)
 
+-- | Generic Block cipher that wrap a specific block cipher.
+data GBlockCipher = forall a . BlockCipher a => GBlockCipher a
+
 data Mode = ECB
           | CBC
           | CTR
@@ -94,7 +97,6 @@ doOne iters env szs name f = do
             | val > (10 * 1024) = printf "%.1f M/s" (val / 1024)
             | otherwise         = printf "%.1f K/s" val
 
-data GBlockCipher = forall a . BlockCipher a => GBlockCipher a
 
 runBench :: Int -> [Int] -> [Mode] -> [GBlockCipher] -> Criterion ()
 runBench iters szs modes ciphers = do
