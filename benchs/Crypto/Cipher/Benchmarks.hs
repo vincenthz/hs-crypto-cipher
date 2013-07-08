@@ -98,8 +98,8 @@ doOne iters env szs name f = do
             | otherwise         = printf "%.1f K/s" val
 
 
-runBench :: Int -> [Int] -> [Mode] -> [GBlockCipher] -> Criterion ()
-runBench iters szs modes ciphers = do
+runBench :: Int -> Bool -> [Int] -> [Mode] -> [GBlockCipher] -> Criterion ()
+runBench iters showTime szs modes ciphers = do
     env     <- measureEnvironment
     reports <- concat <$> mapM (runBenchCipher env) ciphers
     let docHeader = col1 "cipher name" <+> hsep (map (textOf 12 . show) szs)
@@ -112,7 +112,9 @@ runBench iters szs modes ciphers = do
                 benchs = modesToBench cipher modes
             mapM (\(benchMode, benchF) -> doOne iters env szs (name ++ "-" ++ show benchMode) benchF) benchs
         toLine (name, szReports) =
-            hsep (col1 name : map (textOf 12 . reportSpeedS)  szReports)
+            hsep (col1 name : map field szReports)
+        field | showTime  = textOf 12 . reportSecs
+              | otherwise = textOf 12 . reportSpeedS
         textOf n s | len == n  = text s
                    | len < n   = text (s ++ replicate (n - len) ' ')
                    | otherwise = text (take n s)
@@ -123,6 +125,7 @@ data OptionArg = SizeArg String
                | CipherArg String
                | ModeArg String
                | Iter String
+               | Time
                | Help
                deriving (Show,Eq)
 
@@ -163,12 +166,13 @@ defaultMain ciphers = do
                                                 _           -> (sp, mp, it)
             
                                             ) (defaultSzs, defaultModes, 100) os
-                                    withConfig defaultConfig $ runBench iters ss ms (instanciateCiphers ciphers)
+                                    withConfig defaultConfig $ runBench iters (Time `elem` os) ss ms (instanciateCiphers ciphers)
         (_,_,err) -> error (show err)
   where opts =
             [ Option ['n'] ["iter"] (ReqArg Iter "iteration") "number of iterations per benchmarks"
             , Option [] ["size"] (ReqArg SizeArg "size") "size to run (csv)"
             , Option [] ["cipher"] (ReqArg CipherArg "cipher") "cipher to run (csv)"
             , Option [] ["mode"] (ReqArg ModeArg "mode") "mode to run (csv)"
+            , Option ['t'] ["time"] (NoArg Time) "show average time instead of average speed"
             , Option ['h'] ["help"] (NoArg Help) "get help"
             ]
