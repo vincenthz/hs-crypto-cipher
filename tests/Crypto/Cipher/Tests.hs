@@ -14,11 +14,9 @@ module Crypto.Cipher.Tests
 import Control.Applicative
 import Control.Monad
 
-import Test.Framework (Test, defaultMain, testGroup)
+import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
-
 import Test.QuickCheck
-import Test.Framework.Providers.QuickCheck2 (testProperty)
 
 import Crypto.Cipher.Types
 import qualified Data.ByteString as B
