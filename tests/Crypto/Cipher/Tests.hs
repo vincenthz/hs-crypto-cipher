@@ -102,15 +102,6 @@ instance Arbitrary GCMUnit where
 
 -}
 
-testProperty_ECB (ECBUnit (cipherInit -> ctx) plaintext) =
-    plaintext `assertEq` ecbDecrypt ctx (ecbEncrypt ctx plaintext)
-
-testProperty_CBC (CBCUnit (cipherInit -> ctx) testIV plaintext) =
-    plaintext `assertEq` cbcDecrypt ctx testIV (cbcEncrypt ctx testIV plaintext)
-
-testProperty_CTR (CTRUnit (cipherInit -> ctx) testIV plaintext) =
-    plaintext `assertEq` ctrCombine ctx testIV (ctrCombine ctx testIV plaintext)
-
 {-
 testProperty_XTS (XTSUnit (cipherInit -> ctx1) (cipherInit -> ctx2) testIV plaintext) =
     plaintext `assertEq` xtsDecrypt (ctx1, ctx2) testIV 0 (xtsEncrypt (ctx1, ctx2) testIV 0 plaintext)
@@ -143,3 +134,11 @@ testPropertyModes cipher =
                     ,testProperty_CBC
                     ,testProperty_CTR
                     )
+        testProperty_ECB (ECBUnit (cipherInit -> ctx) plaintext) =
+            plaintext `assertEq` ecbDecrypt ctx (ecbEncrypt ctx plaintext)
+
+        testProperty_CBC (CBCUnit (cipherInit -> ctx) testIV plaintext) =
+            plaintext `assertEq` cbcDecrypt ctx testIV (cbcEncrypt ctx testIV plaintext)
+
+        testProperty_CTR (CTRUnit (cipherInit -> ctx) testIV plaintext) =
+            plaintext `assertEq` ctrCombine ctx testIV (ctrCombine ctx testIV plaintext)
