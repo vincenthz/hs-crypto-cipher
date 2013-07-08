@@ -144,6 +144,8 @@ instanciateCiphers ciphers = map proxy ciphers
                             Just sz -> B.replicate sz 1
              in cipherInit (fromJust $ makeKey bs)
 
+-- | DefaultMain: parse command line arguments, run benchmarks
+-- and report
 defaultMain :: [GBlockCipher] -> IO ()
 defaultMain ciphers = do
     args <- getArgs
