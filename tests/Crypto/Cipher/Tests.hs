@@ -69,8 +69,10 @@ generateIv = ivFromCipher undefined
 
 generateIvGCM = choose (12,90) >>= \sz -> (B.pack <$> replicateM sz arbitrary)
 
+generatePlaintextMultiple16 :: Gen B.ByteString
 generatePlaintextMultiple16 = choose (1,128) >>= \size -> replicateM (size*16) arbitrary >>= return . B.pack
 
+generatePlaintext :: Gen B.ByteString
 generatePlaintext = choose (0,324) >>= \size -> replicateM size arbitrary >>= return . B.pack
 
 instance BlockCipher a => Arbitrary (ECBUnit a) where
