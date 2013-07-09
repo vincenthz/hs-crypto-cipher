@@ -16,6 +16,7 @@ data-files:          README.md
 
 Library
   Exposed-modules:   Crypto.Cipher.Types
+  Other-modules:     Crypto.Cipher.Types.GF
   Build-depends:     base >= 4 && < 5
                    , bytestring
                    , byteable >= 0.1.1

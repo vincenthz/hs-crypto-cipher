@@ -14,6 +14,7 @@ module Crypto.Cipher.Types
       Cipher(..)
     , BlockCipher(..)
     , StreamCipher(..)
+    , DataUnitOffset
     -- * Key type and constructor
     , Key
     , makeKey
@@ -32,6 +33,10 @@ import qualified Data.ByteString as B
 import Data.Byteable
 import Data.Word
 import Data.Bits (shiftR, xor)
+import Crypto.Cipher.Types.GF
+
+-- | Offset inside an XTS data unit, measured in block size.
+type DataUnitOffset = Word32
 
 -- | Symmetric cipher class.
 class Cipher cipher where
@@ -86,18 +91,16 @@ class Cipher cipher => BlockCipher cipher where
     ctrCombine :: cipher -> IV cipher -> ByteString -> ByteString
     ctrCombine = ctrCombineGeneric
 
-{-
     -- | encrypt using the XTS mode.
     --
     -- input need to be a multiple of the blocksize
-    xtsEncrypt :: cipher -> IV cipher -> ByteString -> ByteString
+    xtsEncrypt :: (cipher, cipher) -> IV cipher -> DataUnitOffset -> ByteString -> ByteString
     xtsEncrypt = xtsEncryptGeneric
     -- | decrypt using the XTS mode.
     --
     -- input need to be a multiple of the blocksize
-    xtsDecrypt :: cipher -> IV cipher -> ByteString -> ByteString
+    xtsDecrypt :: (cipher, cipher) -> IV cipher -> DataUnitOffset -> ByteString -> ByteString
     xtsDecrypt = xtsDecryptGeneric
--}
 
 -- | a Key parametrized by the cipher
 newtype Key c = Key SecureMem deriving (Eq)
@@ -177,6 +180,28 @@ ctrCombineGeneric cipher ivini input = B.concat $ doCnt ivini $ chunk (blockSize
         doCnt iv (i:is) =
             let ivEnc = ecbEncrypt cipher (toBytes iv)
              in bxor i ivEnc : doCnt (ivAdd iv 1) is
+
+xtsEncryptGeneric :: BlockCipher cipher => (cipher,cipher) -> IV cipher -> DataUnitOffset -> ByteString -> ByteString
+xtsEncryptGeneric = xtsGeneric ecbEncrypt
+
+xtsDecryptGeneric :: BlockCipher cipher => (cipher,cipher) -> IV cipher -> DataUnitOffset -> ByteString -> ByteString
+xtsDecryptGeneric = xtsGeneric ecbDecrypt
+
+xtsGeneric :: BlockCipher cipher
+           => (cipher -> B.ByteString -> B.ByteString)
+           -> (cipher,cipher)
+           -> IV cipher
+           -> DataUnitOffset
+           -> ByteString
+           -> ByteString
+xtsGeneric f (cipher, tweakCipher) iv sPoint input = B.concat $ doXts iniTweak $ chunk (blockSize cipher) input
+  where encTweak = ecbEncrypt tweakCipher (toBytes iv)
+        iniTweak = iterate xtsGFMul encTweak !! fromIntegral sPoint
+        doXts _     []     = []
+        doXts tweak (i:is) =
+            let o = bxor (f cipher $ bxor i tweak) tweak
+             in o : doXts (xtsGFMul tweak) is
+
 
 chunk :: Int -> ByteString -> [ByteString]
 chunk sz bs = split bs

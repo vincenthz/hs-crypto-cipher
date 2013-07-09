@@ -44,6 +44,7 @@ data GBlockCipher = forall a . BlockCipher a => GBlockCipher a
 data Mode = ECB
           | CBC
           | CTR
+          | XTS
           deriving (Show, Enum, Bounded)
 
 defaultSzs :: [Int]
@@ -62,6 +63,7 @@ modeToBench :: BlockCipher cipher => cipher -> Mode -> (B.ByteString -> B.ByteSt
 modeToBench cipher ECB = ecbEncrypt cipher
 modeToBench cipher CBC = cbcEncrypt cipher nullIV
 modeToBench cipher CTR = ctrCombine cipher nullIV
+modeToBench cipher XTS = xtsEncrypt (cipher, cipher) nullIV 0
 
 modesToBench :: BlockCipher cipher => cipher -> [Mode] -> [(Mode, B.ByteString -> B.ByteString)]
 modesToBench cipher = map (\mode -> (mode, modeToBench cipher mode))
