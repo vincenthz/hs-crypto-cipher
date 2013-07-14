@@ -8,7 +8,9 @@
 -- Slow Galois Field arithmetic for generic XTS and GCM implementation
 --
 module Crypto.Cipher.Types.GF
-    ( xtsGFMul
+    (
+    -- * XTS support
+      xtsGFMul
     ) where
 
 import Control.Applicative
