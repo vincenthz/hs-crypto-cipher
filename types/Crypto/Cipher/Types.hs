@@ -8,6 +8,8 @@
 -- symmetric cipher basic types
 --
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ExistentialQuantification #-}
 module Crypto.Cipher.Types
     (
     -- * Cipher classes
@@ -15,6 +17,15 @@ module Crypto.Cipher.Types
     , BlockCipher(..)
     , StreamCipher(..)
     , DataUnitOffset
+    , AEAD(..)
+    , AEADState(..)
+    , AEADMode(..)
+    , AEADModeImpl(..)
+    -- * AEAD
+    , aeadAppendHeader
+    , aeadEncrypt
+    , aeadDecrypt
+    , aeadFinalize
     -- * Key type and constructor
     , Key
     , makeKey
@@ -102,6 +113,54 @@ class Cipher cipher => BlockCipher cipher where
     xtsDecrypt :: (cipher, cipher) -> IV cipher -> DataUnitOffset -> ByteString -> ByteString
     xtsDecrypt = xtsDecryptGeneric
 
+    -- | Initialize a new AEAD State
+    --
+    -- When Nothing is returns, it means the mode is not handled.
+    aeadInit :: Byteable iv => AEADMode -> cipher -> iv -> Maybe (AEAD cipher)
+    aeadInit _ _ _ = Nothing
+
+-- | AEAD Mode
+data AEADMode =
+      AEAD_OCB
+    | AEAD_CCM
+    | AEAD_EAX
+    | AEAD_CWC
+    | AEAD_GCM
+    deriving (Show,Eq)
+
+-- | Authenticated Encryption with Associated Data algorithms
+data AEAD cipher = AEAD cipher (AEADState cipher)
+
+-- | Wrapper for any AEADState
+data AEADState cipher = forall st . AEADModeImpl cipher st => AEADState st
+
+-- | Class of AEAD Mode implementation
+class BlockCipher cipher => AEADModeImpl cipher state where
+    aeadStateAppendHeader :: cipher -> state -> ByteString -> state
+    aeadStateEncrypt      :: cipher -> state -> ByteString -> (ByteString, state)
+    aeadStateDecrypt      :: cipher -> state -> ByteString -> (ByteString, state)
+    aeadStateFinalize     :: cipher -> state -> Int -> AuthTag
+
+-- | Append associated data into the AEAD state
+aeadAppendHeader :: BlockCipher a => AEAD a -> ByteString -> AEAD a
+aeadAppendHeader (AEAD cipher (AEADState state)) bs =
+    AEAD cipher $ AEADState (aeadStateAppendHeader cipher state bs)
+
+-- | Encrypt input and append into the AEAD state
+aeadEncrypt :: BlockCipher a => AEAD a -> ByteString -> (ByteString, AEAD a)
+aeadEncrypt (AEAD cipher (AEADState state)) input = (output, AEAD cipher (AEADState nst))
+  where (output, nst) = aeadStateEncrypt cipher state input
+
+-- | Decrypt input and append into the AEAD state
+aeadDecrypt :: BlockCipher a => AEAD a -> ByteString -> (ByteString, AEAD a)
+aeadDecrypt (AEAD cipher (AEADState state)) input = (output, AEAD cipher (AEADState nst))
+  where (output, nst) = aeadStateDecrypt cipher state input
+
+-- | Finalize the AEAD state and create an authentification tag
+aeadFinalize :: BlockCipher a => AEAD a -> Int -> AuthTag
+aeadFinalize (AEAD cipher (AEADState state)) len =
+    aeadStateFinalize cipher state len
+
 -- | a Key parametrized by the cipher
 newtype Key c = Key SecureMem deriving (Eq)
 
@@ -112,11 +171,13 @@ instance Byteable (Key c) where
 
 -- | an IV parametrized by the cipher
 newtype IV c = IV ByteString deriving (Eq)
+
 instance Byteable (IV c) where
     toBytes (IV sm) = sm
 
 -- | Authentification Tag for AE cipher mode
 newtype AuthTag = AuthTag ByteString
+    deriving (Show)
 
 instance Eq AuthTag where
     (AuthTag a) == (AuthTag b) = constEqBytes a b
