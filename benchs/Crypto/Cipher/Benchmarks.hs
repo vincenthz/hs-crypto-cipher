@@ -45,6 +45,11 @@ data Mode = ECB
           | CBC
           | CTR
           | XTS
+          | OCB
+          | CCM
+          | EAX
+          | CWC
+          | GCM
           deriving (Show, Enum, Bounded)
 
 defaultSzs :: [Int]
@@ -59,14 +64,24 @@ doCipher env nbIter szs f = mapM getMeanFromBench szs
             runBenchmark env (whnf f $ B.replicate sz 0) >>= \sample ->
             analyseMean sample nbIter >>= return
 
-modeToBench :: BlockCipher cipher => cipher -> Mode -> (B.ByteString -> B.ByteString)
-modeToBench cipher ECB = ecbEncrypt cipher
-modeToBench cipher CBC = cbcEncrypt cipher nullIV
-modeToBench cipher CTR = ctrCombine cipher nullIV
-modeToBench cipher XTS = xtsEncrypt (cipher, cipher) nullIV 0
+modeToBench :: BlockCipher cipher => cipher -> Mode -> Maybe (B.ByteString -> B.ByteString)
+modeToBench cipher ECB = Just $ ecbEncrypt cipher
+modeToBench cipher CBC = Just $ cbcEncrypt cipher nullIV
+modeToBench cipher CTR = Just $ ctrCombine cipher nullIV
+modeToBench cipher XTS = Just $ xtsEncrypt (cipher, cipher) nullIV 0
+modeToBench cipher OCB = benchAEAD cipher AEAD_OCB
+modeToBench cipher GCM = benchAEAD cipher AEAD_GCM
+modeToBench cipher CCM = benchAEAD cipher AEAD_CCM
+modeToBench cipher CWC = benchAEAD cipher AEAD_CWC
+modeToBench cipher EAX = benchAEAD cipher AEAD_EAX
+
+benchAEAD :: BlockCipher cipher => cipher -> AEADMode -> Maybe (B.ByteString -> B.ByteString)
+benchAEAD cipher mode = (\aead -> (\b -> snd $ aeadSimpleEncrypt aead B.empty b (blockSize cipher))) `fmap` aeadInit mode cipher (B.replicate (blockSize cipher) 0)
 
 modesToBench :: BlockCipher cipher => cipher -> [Mode] -> [(Mode, B.ByteString -> B.ByteString)]
-modesToBench cipher = map (\mode -> (mode, modeToBench cipher mode))
+modesToBench cipher = reverse . foldl (\acc mode -> case modeToBench cipher mode of
+                                                      Just fb -> (mode, fb) : acc
+                                                      Nothing -> acc) []
 
 data Report = Report
     { reportSz     :: Int
