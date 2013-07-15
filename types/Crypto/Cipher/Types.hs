@@ -26,6 +26,8 @@ module Crypto.Cipher.Types
     , aeadEncrypt
     , aeadDecrypt
     , aeadFinalize
+    , aeadSimpleEncrypt
+    , aeadSimpleDecrypt
     -- * Key type and constructor
     , Key
     , makeKey
@@ -160,6 +162,32 @@ aeadDecrypt (AEAD cipher (AEADState state)) input = (output, AEAD cipher (AEADSt
 aeadFinalize :: BlockCipher a => AEAD a -> Int -> AuthTag
 aeadFinalize (AEAD cipher (AEADState state)) len =
     aeadStateFinalize cipher state len
+
+-- | Simple AEAD encryption
+aeadSimpleEncrypt :: BlockCipher a
+                  => AEAD a        -- ^ A new AEAD Context
+                  -> B.ByteString  -- ^ Optional Authentified Header
+                  -> B.ByteString  -- ^ Optional Plaintext
+                  -> Int           -- ^ Tag length
+                  -> (AuthTag, B.ByteString) -- ^ Authentification tag and ciphertext
+aeadSimpleEncrypt aeadIni header input taglen = (tag, output)
+  where aead                = aeadAppendHeader aeadIni header
+        (output, aeadFinal) = aeadEncrypt aead input
+        tag                 = aeadFinalize aeadFinal taglen
+
+-- | Simple AEAD decryption
+aeadSimpleDecrypt :: BlockCipher a
+                  => AEAD a        -- ^ A new AEAD Context
+                  -> B.ByteString  -- ^ Optional Authentified Header
+                  -> B.ByteString  -- ^ Optional Plaintext
+                  -> AuthTag       -- ^ Tag length
+                  -> Maybe B.ByteString -- ^ Plaintext
+aeadSimpleDecrypt aeadIni header input authTag
+    | tag == authTag = Just output
+    | otherwise      = Nothing
+  where aead                = aeadAppendHeader aeadIni header
+        (output, aeadFinal) = aeadDecrypt aead input
+        tag                 = aeadFinalize aeadFinal (byteableLength authTag)
 
 -- | a Key parametrized by the cipher
 newtype Key c = Key SecureMem deriving (Eq)
