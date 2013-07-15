@@ -8,138 +8,26 @@
 
 {-# LANGUAGE ViewPatterns #-}
 module Crypto.Cipher.Tests
-    ( testPropertyModes
+    ( testBlockCipher
+    -- * KATs
+    , defaultKATs
+    , KATs(..)
+    , KAT_ECB(..)
+    , KAT_CBC(..)
+    , KAT_CTR(..)
+    , KAT_XTS(..)
+    , KAT_AEAD(..)
     ) where
 
-import Control.Applicative
-import Control.Monad
-
 import Test.Framework (Test, testGroup)
-import Test.Framework.Providers.QuickCheck2 (testProperty)
-import Test.QuickCheck
 
 import Crypto.Cipher.Types
-import qualified Data.ByteString as B
-import Data.Byteable
-import Data.Maybe
+import Crypto.Cipher.Tests.KATs
+import Crypto.Cipher.Tests.Properties
 
--- | a ECB unit test
-data ECBUnit a = ECBUnit (Key a) B.ByteString
-    deriving (Eq)
-
--- | a CBC unit test
-data CBCUnit a = CBCUnit (Key a) (IV a) B.ByteString
-    deriving (Eq)
-
--- | a CTR unit test
-data CTRUnit a = CTRUnit (Key a) (IV a) B.ByteString
-    deriving (Eq)
-
--- | a XTS unit test
-data XTSUnit a = XTSUnit (Key a) (Key a) (IV a) B.ByteString
-    deriving (Eq)
-
--- | a GCM unit test
-data GCMUnit a = GCMUnit (Key a) B.ByteString B.ByteString B.ByteString
-    deriving (Eq)
-
-instance Show (ECBUnit a) where
-    show (ECBUnit key b) = "ECB(key=" ++ show (toBytes key) ++ ",input=" ++ show b ++ ")"
-instance Show (CBCUnit a) where
-    show (CBCUnit key iv b) = "CBC(key=" ++ show (toBytes key) ++ ",iv=" ++ show (toBytes iv) ++ ",input=" ++ show b ++ ")"
-instance Show (CTRUnit a) where
-    show (CTRUnit key iv b) = "CTR(key=" ++ show (toBytes key) ++ ",iv=" ++ show (toBytes iv) ++ ",input=" ++ show b ++ ")"
-instance Show (XTSUnit a) where
-    show (XTSUnit key1 key2 iv b) = "XTS(key1=" ++ show (toBytes key1) ++ ",key2=" ++ show (toBytes key2) ++ ",iv=" ++ show (toBytes iv) ++ ",input=" ++ show b ++ ")"
-instance Show (GCMUnit a) where
-    show (GCMUnit key iv aad b) = "GCM(key=" ++ show (toBytes key) ++ ",iv=" ++ show iv ++ ",aad=" ++ show (toBytes aad) ++ ",input=" ++ show b ++ ")"
-
-generateKey :: BlockCipher a => Gen (Key a)
-generateKey = keyFromCipher undefined
-  where keyFromCipher :: BlockCipher a => a -> Gen (Key a)
-        keyFromCipher cipher = case cipherKeySize cipher of
-                                Just sz -> fromJust . makeKey . B.pack <$> replicateM sz arbitrary
-                                Nothing -> fromJust . makeKey . B.pack <$> (choose (1,66) >>= \sz -> replicateM sz arbitrary)
-
-generateIv :: BlockCipher a => Gen (IV a)
-generateIv = ivFromCipher undefined
-  where ivFromCipher :: BlockCipher a => a -> Gen (IV a)
-        ivFromCipher cipher = fromJust . makeIV . B.pack <$> replicateM (blockSize cipher) arbitrary
-
-generateIvGCM :: Gen B.ByteString
-generateIvGCM = choose (12,90) >>= \sz -> (B.pack <$> replicateM sz arbitrary)
-
-generatePlaintextMultiple16 :: Gen B.ByteString
-generatePlaintextMultiple16 = choose (1,128) >>= \size -> replicateM (size*16) arbitrary >>= return . B.pack
-
-generatePlaintext :: Gen B.ByteString
-generatePlaintext = choose (0,324) >>= \size -> replicateM size arbitrary >>= return . B.pack
-
-instance BlockCipher a => Arbitrary (ECBUnit a) where
-    arbitrary = ECBUnit <$> generateKey
-                        <*> generatePlaintextMultiple16
-
-instance BlockCipher a => Arbitrary (CBCUnit a) where
-    arbitrary = CBCUnit <$> generateKey
-                        <*> generateIv
-                        <*> generatePlaintextMultiple16
-
-instance BlockCipher a => Arbitrary (CTRUnit a) where
-    arbitrary = CTRUnit <$> generateKey
-                        <*> generateIv
-                        <*> generatePlaintext
-
-instance BlockCipher a => Arbitrary (XTSUnit a) where
-    arbitrary = XTSUnit <$> generateKey
-                        <*> generateKey
-                        <*> generateIv
-                        <*> generatePlaintextMultiple16
-
-instance BlockCipher a => Arbitrary (GCMUnit a) where
-    arbitrary = GCMUnit <$> generateKey
-                        <*> generateIvGCM
-                        <*> generatePlaintext
-                        <*> generatePlaintext
-
-assertEq :: B.ByteString -> B.ByteString -> Bool
-assertEq b1 b2 | b1 /= b2  = error ("b1: " ++ show b1 ++ " b2: " ++ show b2)
-               | otherwise = True
-
-testPropertyModes :: BlockCipher a => a -> [Test]
-testPropertyModes cipher =
-    [ testGroup "decrypt.encrypt==id"
-        [ testProperty "ECB" ecbProp
-        , testProperty "CBC" cbcProp
-        , testProperty "CTR" ctrProp
-        , testProperty "XTS" xtsProp
-        , testProperty "GCM" gcmProp
-        ]
-    ]
-  where (ecbProp,cbcProp,ctrProp,xtsProp,gcmProp) = toTests cipher
-        toTests :: BlockCipher a
-                => a
-                -> ((ECBUnit a -> Bool), (CBCUnit a -> Bool), (CTRUnit a -> Bool), (XTSUnit a -> Bool), (GCMUnit a -> Bool))
-        toTests _ = (testProperty_ECB
-                    ,testProperty_CBC
-                    ,testProperty_CTR
-                    ,testProperty_XTS
-                    ,testProperty_GCM
-                    )
-        testProperty_ECB (ECBUnit (cipherInit -> ctx) plaintext) =
-            plaintext `assertEq` ecbDecrypt ctx (ecbEncrypt ctx plaintext)
-
-        testProperty_CBC (CBCUnit (cipherInit -> ctx) testIV plaintext) =
-            plaintext `assertEq` cbcDecrypt ctx testIV (cbcEncrypt ctx testIV plaintext)
-
-        testProperty_CTR (CTRUnit (cipherInit -> ctx) testIV plaintext) =
-            plaintext `assertEq` ctrCombine ctx testIV (ctrCombine ctx testIV plaintext)
-
-        testProperty_XTS (XTSUnit (cipherInit -> ctx1) (cipherInit -> ctx2) testIV plaintext) =
-            plaintext `assertEq` xtsDecrypt (ctx1, ctx2) testIV 0 (xtsEncrypt (ctx1, ctx2) testIV 0 plaintext)
-
-        testProperty_GCM (GCMUnit (cipherInit -> ctx) testIV aad plaintext) =
-            ctx `seq` testIV `seq` aad `seq` plaintext `seq` True
-            --let (cipherText, tag) = AES.encryptGCM ctx testIV aad plaintext in
-            --let (plaintext2, tag2) = AES.decryptGCM ctx testIV aad cipherText in
-            --(plaintext `assertEq` plaintext2) && (tag == tag2)
-
+-- | Return tests for a specific blockcipher and a list of KATs
+testBlockCipher :: BlockCipher a => KATs -> a -> Test
+testBlockCipher kats cipher = testGroup (cipherName cipher)
+    (  (if kats == defaultKATs  then [] else [testKATs kats cipher])
+    ++ testModes cipher
+    )

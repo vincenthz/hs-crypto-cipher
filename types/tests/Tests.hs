@@ -20,6 +20,6 @@ instance BlockCipher XorCipher where
     ecbEncrypt _ b = B.pack $ B.zipWith xor (B.replicate (B.length b) 0xa5) b
     ecbDecrypt _ b = B.pack $ B.zipWith xor (B.replicate (B.length b) 0xa5) b
 
-tests = testPropertyModes (undefined :: XorCipher)
+tests = testBlockCipher defaultKATs (undefined :: XorCipher)
 
-main = defaultMain tests
+main = defaultMain [tests]

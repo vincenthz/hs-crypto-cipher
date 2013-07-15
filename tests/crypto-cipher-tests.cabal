@@ -15,6 +15,8 @@ Cabal-Version:       >=1.8
 
 Library
   Exposed-modules:   Crypto.Cipher.Tests
+  Other-modules:     Crypto.Cipher.Tests.KATs
+                     Crypto.Cipher.Tests.Properties
   Build-depends:     base >= 3 && < 5
                    , QuickCheck >= 2
                    , mtl
