@@ -23,22 +23,6 @@ Library
                    , securemem >= 0.1.1
   ghc-options:       -Wall -fwarn-tabs
 
-Test-Suite test-crypto-cipher-types
-  type:              exitcode-stdio-1.0
-  hs-source-dirs:    tests ../tests
-  Main-is:           Tests.hs
-  Build-Depends:     base >= 3 && < 5
-                   , bytestring
-                   , byteable
-                   , crypto-cipher-types
-                   , mtl
-                   , QuickCheck >= 2
-                   , HUnit
-                   , test-framework
-                   , test-framework-quickcheck2
-                   , test-framework-hunit
-  ghc-options:       -Wall -fno-warn-orphans -fno-warn-missing-signatures
-
 source-repository head
   type: git
   location: git://github.com/vincenthz/hs-crypto-cipher
