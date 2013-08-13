@@ -1,6 +1,11 @@
 Name:                cryptocipher
 Version:             0.5.1
-Description:         Symmetrical block and stream ciphers.
+Description:
+    Symmetrical block and stream ciphers.
+    .
+    This package is eventually going away in this form, and should be considered deprecated.
+    use 'cipher-aes' for AES. For blowfish, camellia, DES/3DES, the package is still maintained,
+    but eventually each cipher will be available in another package.
 License:             BSD3
 License-file:        LICENSE
 Copyright:           Vincent Hanquez <vincent@snarc.org>
