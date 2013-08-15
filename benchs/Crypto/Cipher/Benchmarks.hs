@@ -68,7 +68,9 @@ modeToBench :: BlockCipher cipher => cipher -> Mode -> Maybe (B.ByteString -> B.
 modeToBench cipher ECB = Just $ ecbEncrypt cipher
 modeToBench cipher CBC = Just $ cbcEncrypt cipher nullIV
 modeToBench cipher CTR = Just $ ctrCombine cipher nullIV
-modeToBench cipher XTS = Just $ xtsEncrypt (cipher, cipher) nullIV 0
+modeToBench cipher XTS
+    | blockSize cipher == 16 = Just $ xtsEncrypt (cipher, cipher) nullIV 0
+    | otherwise              = Nothing
 modeToBench cipher OCB = benchAEAD cipher AEAD_OCB
 modeToBench cipher GCM = benchAEAD cipher AEAD_GCM
 modeToBench cipher CCM = benchAEAD cipher AEAD_CCM
