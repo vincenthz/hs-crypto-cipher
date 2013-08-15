@@ -125,8 +125,9 @@ testModes cipher =
         testProperty_CTR (CTRUnit (cipherInit -> ctx) testIV plaintext) =
             plaintext `assertEq` ctrCombine ctx testIV (ctrCombine ctx testIV plaintext)
 
-        testProperty_XTS (XTSUnit (cipherInit -> ctx1) (cipherInit -> ctx2) testIV plaintext) =
-            plaintext `assertEq` xtsDecrypt (ctx1, ctx2) testIV 0 (xtsEncrypt (ctx1, ctx2) testIV 0 plaintext)
+        testProperty_XTS (XTSUnit (cipherInit -> ctx1) (cipherInit -> ctx2) testIV plaintext)
+            | blockSize ctx1 == 16 = plaintext `assertEq` xtsDecrypt (ctx1, ctx2) testIV 0 (xtsEncrypt (ctx1, ctx2) testIV 0 plaintext)
+            | otherwise            = True
 
         testProperty_AEAD mode (AEADUnit (cipherInit -> ctx) testIV aad plaintext) =
             case aeadInit mode ctx testIV of
