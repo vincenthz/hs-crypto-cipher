@@ -1,0 +1,62 @@
+Name:                cipher-des
+Version:             0.0.1
+Description:         DES and 3DES primitives
+License:             BSD3
+License-file:        LICENSE
+Copyright:           Vincent Hanquez <vincent@snarc.org>
+Author:              Vincent Hanquez <vincent@snarc.org>
+Maintainer:          Vincent Hanquez <vincent@snarc.org>
+Synopsis:            DES and 3DES primitives
+Category:            Cryptography
+Build-Type:          Simple
+Homepage:            http://github.com/vincenthz/hs-crypto-cipher
+Cabal-Version:       >=1.8
+Extra-Source-Files:  Tests/*.hs
+                     cbits/*.h
+                     cbits/aes_x86ni_impl.c
+
+Library
+  Build-Depends:     base >= 4 && < 5
+                   , bytestring
+                   , byteable
+                   , crypto-cipher-types
+                   , securemem >= 0.1.2
+                   , cereal
+  Exposed-modules:   Crypto.Cipher.DES
+                   , Crypto.Cipher.TripleDES
+  Other-modules:     Crypto.Cipher.DES.Primitive
+                   , Crypto.Cipher.DES.Serialization
+  ghc-options:       -Wall -optc-O3 -fno-cse -fwarn-tabs
+  if (arch(i386) || arch(x86_64))
+    CPP-options: -DARCH_IS_LITTLE_ENDIAN
+
+Test-Suite test-cipher-des
+  type:              exitcode-stdio-1.0
+  hs-source-dirs:    Tests
+  Main-Is:           Tests.hs
+  Build-depends:     base >= 4 && < 5
+                   , cipher-des
+                   , crypto-cipher-types
+                   , crypto-cipher-tests
+                   , bytestring
+                   , byteable
+                   , QuickCheck >= 2
+                   , test-framework >= 0.3.3
+                   , test-framework-quickcheck2 >= 0.2.9
+
+Benchmark bench-cipher-des
+  hs-source-dirs:    Benchmarks
+  Main-Is:           Benchmarks.hs
+  type:              exitcode-stdio-1.0
+  Build-depends:     base >= 4 && < 5
+                   , bytestring
+                   , cipher-des
+                   , crypto-cipher-types
+                   , crypto-cipher-benchmarks
+                   , criterion
+                   , mtl
+
+source-repository head
+  type:     git
+  location: git://github.com/vincenthz/hs-crypto-cipher
+  subdir:   cipher-des
