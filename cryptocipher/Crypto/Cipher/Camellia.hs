@@ -177,8 +177,13 @@ setKeyInterim keyseed =
 		in
 	(w64tow128 kL, w64tow128 kR, w64tow128 kA, w64tow128 kB)
 
-initKey128 :: B.ByteString -> Either String Key
-initKey128 keyseed
+-- | Initialize a 128-bit key
+-- Return the initialized key or a error message if the given 
+-- keyseed was not 16-bytes in length.
+--
+initKey128 :: B.ByteString -- ^ The seed to use when creating the key
+           -> Either String Key
+initKey128 keyseed 
 	| B.length keyseed /= 16 = Left "wrong key size"
 	| otherwise              =
 		let (kL, _, kA, _) = setKeyInterim keyseed in
@@ -320,10 +325,14 @@ doChunks f b =
 		then f x : doChunks f rest
 		else [ f x ]
 
-{- | encrypt with the key a bytestring and returns the encrypted bytestring -}
-encrypt :: Key -> B.ByteString -> B.ByteString
+-- | Encrypts the given ByteString using the given Key
+encrypt :: Key          -- ^ The key to use
+        -> B.ByteString -- ^ The data to encrypt
+        -> B.ByteString
 encrypt key b = B.concat $ doChunks (encryptChunk key) b
 
-{- | decrypt with the key a bytestring and returns the encrypted bytestring -}
-decrypt :: Key -> B.ByteString -> B.ByteString
+-- | Decrypts the given ByteString using the given Key
+decrypt :: Key          -- ^ The key to use
+        -> B.ByteString -- ^ The data to decrypt
+        -> B.ByteString
 decrypt key b = B.concat $ doChunks (decryptChunk key) b

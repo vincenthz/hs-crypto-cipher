@@ -36,8 +36,16 @@ data BlowfishState = BF Pbox Sbox Sbox Sbox Sbox
 data Key = Key { unKey :: Vector Word32 }
     deriving (Eq, Show)
 
-encrypt, decrypt :: Key -> B.ByteString -> B.ByteString
+-- | Encrypts the given ByteString using the given Key
+encrypt :: Key          -- ^ The key to use
+        -> B.ByteString -- ^ The data to use
+        -> B.ByteString
 encrypt = cipher . selectEncrypt . bfState . initBoxes
+
+-- | Decrypts the given ByteString using the given Key
+decrypt :: Key          -- ^ The key to use
+        -> B.ByteString -- ^ The data to use
+        -> B.ByteString
 decrypt = cipher . selectDecrypt . bfState . initBoxes
 
 instance Serialize Blowfish where
@@ -74,7 +82,13 @@ initBoxes :: Key -> Blowfish
 initBoxes k = let (BF p s0 s1 s2 s3) = bfMakeKey k
               in Blowfish k (BF p s0 s1 s2 s3)
 
-initKey :: B.ByteString -> Either String Key
+-- | Initialize a key
+-- Return the initialized key or a error message when:
+-- - Keyseed was larger than 448 bits.
+-- - Expanded key length was incorrect
+-- - An internal error occured
+initKey :: B.ByteString -- ^ The seed to use when creating the key
+        -> Either String Key
 initKey b
     | B.length b > (448 `div` 8) = fail "key too large"
     | B.length b == 0 = keyFromByteString (B.replicate (18*4) 0)
