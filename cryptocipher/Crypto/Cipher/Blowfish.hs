@@ -8,7 +8,15 @@
 -- based on: BlowfishAux.hs (C) 2002 HardCore SoftWare, Doug Hoyte
 --           (as found in Crypto-4.2.4)
 
-module Crypto.Cipher.Blowfish (Blowfish, Key, initKey, encrypt, decrypt) where
+module Crypto.Cipher.Blowfish 
+    ( Blowfish
+    , Key
+    , initKey
+    , encrypt
+    , decrypt
+    , encryptBlock
+    , decryptBlock
+    , buildKey ) where
 
 import Data.Vector (Vector, (!), (//))
 import qualified Data.Vector as V
@@ -43,6 +51,14 @@ instance Serialize Key where
         case keyFromByteString bs of
             Right k -> return k
             Left _ -> fail "Invalid raw key material."
+
+-- These are useful for defining a BlockCipher instance
+encryptBlock, decryptBlock :: Blowfish -> B.ByteString -> B.ByteString
+encryptBlock = cipher . selectEncrypt . bfState
+decryptBlock = cipher . selectDecrypt . bfState
+buildKey :: B.ByteString -> Maybe Blowfish
+buildKey     = either (const Nothing) (Just . initBoxes) . initKey
+
 
 selectEncrypt, selectDecrypt :: BlowfishState -> (Pbox, BlowfishState)
 selectEncrypt x@(BF p _ _ _ _) = (p, x)
