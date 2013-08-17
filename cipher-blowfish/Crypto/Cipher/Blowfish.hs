@@ -17,10 +17,17 @@ import Data.Byteable
 import Crypto.Cipher.Types
 import Crypto.Cipher.Blowfish.Primitive
 
-newtype Blowfish64 = Blowfish64 Blowfish
-newtype Blowfish128 = Blowfish128 Blowfish
-newtype Blowfish256 = Blowfish256 Blowfish
-newtype Blowfish448 = Blowfish448 Blowfish
+-- | 64 bit keyed blowfish state
+newtype Blowfish64 = Blowfish64 Context
+
+-- | 128 bit keyed blowfish state
+newtype Blowfish128 = Blowfish128 Context
+
+-- | 256 bit keyed blowfish state
+newtype Blowfish256 = Blowfish256 Context
+
+-- | 448 bit keyed blowfish state
+newtype Blowfish448 = Blowfish448 Context
 
 #define INSTANCE_CIPHER(CSTR, NAME, KEYSIZE) \
 instance Cipher CSTR where \
