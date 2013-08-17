@@ -52,7 +52,7 @@ keyFromByteString :: B.ByteString -> Either String Context
 keyFromByteString k
     | B.length k /= (18 * 4) = fail "Incorrect expanded key length."
     | otherwise = return . bfMakeKey . (\ws -> V.generate 18 (ws!!)) . w8tow32 . B.unpack $ k
-  where        
+  where
     w8tow32 :: [Word8] -> [Word32]
     w8tow32 [] = []
     w8tow32 (a:b:c:d:xs) = ( (fromIntegral a `shiftL` 24) .|.
@@ -351,7 +351,7 @@ iSbox2  = mkBox "\
     \\x6f\xd5\xc7\xe7\x56\xe1\x4e\xc4\x36\x2a\xbf\xce\xdd\xc6\xc8\x37\
     \\xd7\x9a\x32\x34\x92\x63\x82\x12\x67\x0e\xfa\x8e\x40\x60\x00\xe0\
     \"
-  
+
 iSbox3 :: Sbox
 iSbox3  = mkBox "\
     \\x3a\x39\xce\x37\xd3\xfa\xf5\xcf\xab\xc2\x77\x37\x5a\xc5\x2d\x1b\

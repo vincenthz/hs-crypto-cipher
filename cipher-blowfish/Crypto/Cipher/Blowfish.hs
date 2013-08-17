@@ -54,7 +54,7 @@ instance BlockCipher CSTR where \
     ; ecbEncrypt (CSTR bf) = encrypt bf \
     ; ecbDecrypt (CSTR bf) = decrypt bf \
     };
-    
+
 INSTANCE_CIPHER(Blowfish64, "blowfish64", 8)
 INSTANCE_CIPHER(Blowfish128, "blowfish128", 16)
 INSTANCE_CIPHER(Blowfish256, "blowfish256", 32)
