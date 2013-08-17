@@ -45,6 +45,7 @@ instance Show (XTSUnit a) where
 instance Show (AEADUnit a) where
     show (AEADUnit key iv aad b) = "AEAD(key=" ++ show (toBytes key) ++ ",iv=" ++ show iv ++ ",aad=" ++ show (toBytes aad) ++ ",input=" ++ show b ++ ")"
 
+-- | Generate an arbitrary valid key for a specific block cipher
 generateKey :: BlockCipher a => Gen (Key a)
 generateKey = keyFromCipher undefined
   where keyFromCipher :: BlockCipher a => a -> Gen (Key a)
@@ -52,14 +53,18 @@ generateKey = keyFromCipher undefined
                                 Just sz -> fromJust . makeKey . B.pack <$> replicateM sz arbitrary
                                 Nothing -> fromJust . makeKey . B.pack <$> (choose (1,66) >>= \sz -> replicateM sz arbitrary)
 
+-- | Generate an arbitrary valid IV for a specific block cipher
 generateIv :: BlockCipher a => Gen (IV a)
 generateIv = ivFromCipher undefined
   where ivFromCipher :: BlockCipher a => a -> Gen (IV a)
         ivFromCipher cipher = fromJust . makeIV . B.pack <$> replicateM (blockSize cipher) arbitrary
 
+-- | Generate an arbitrary valid IV for AEAD for a specific block cipher
 generateIvAEAD :: Gen B.ByteString
 generateIvAEAD = choose (12,90) >>= \sz -> (B.pack <$> replicateM sz arbitrary)
 
+-- | Generate a plaintext multiple of 16 bytes. TODO replace by one function that use the blockSize
+-- cipher instance
 generatePlaintextMultiple16 :: Gen B.ByteString
 generatePlaintextMultiple16 = choose (1,128) >>= \size -> replicateM (size*16) arbitrary >>= return . B.pack
 
@@ -92,6 +97,8 @@ instance BlockCipher a => Arbitrary (AEADUnit a) where
                          <*> generatePlaintext
                          <*> generatePlaintext
 
+-- | Test a generic block cipher for properties
+-- related to block cipher modes.
 testModes :: BlockCipher a => a -> [Test]
 testModes cipher =
     [ testGroup "decrypt.encrypt==id"

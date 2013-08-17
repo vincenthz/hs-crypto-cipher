@@ -11,34 +11,34 @@ import Data.Maybe
 
 -- | ECB KAT
 data KAT_ECB = KAT_ECB
-    { ecbKey        :: ByteString
-    , ecbPlaintext  :: ByteString
-    , ecbCiphertext :: ByteString
+    { ecbKey        :: ByteString -- ^ Key
+    , ecbPlaintext  :: ByteString -- ^ Plaintext
+    , ecbCiphertext :: ByteString -- ^ Ciphertext
     } deriving (Show,Eq)
 
 -- | CBC KAT
 data KAT_CBC = KAT_CBC
-    { cbcKey        :: ByteString
-    , cbcIV         :: ByteString
-    , cbcPlaintext  :: ByteString
-    , cbcCiphertext :: ByteString
+    { cbcKey        :: ByteString -- ^ Key
+    , cbcIV         :: ByteString -- ^ IV
+    , cbcPlaintext  :: ByteString -- ^ Plaintext
+    , cbcCiphertext :: ByteString -- ^ Ciphertext
     } deriving (Show,Eq)
 
 -- | CTR KAT
 data KAT_CTR = KAT_CTR
-    { ctrKey        :: ByteString
-    , ctrIV         :: ByteString
-    , ctrPlaintext  :: ByteString
-    , ctrCiphertext :: ByteString
+    { ctrKey        :: ByteString -- ^ Key
+    , ctrIV         :: ByteString -- ^ IV (usually represented as a 128 bits integer)
+    , ctrPlaintext  :: ByteString -- ^ Plaintext 
+    , ctrCiphertext :: ByteString -- ^ Ciphertext
     } deriving (Show,Eq)
 
 -- | XTS KAT
 data KAT_XTS = KAT_XTS
-    { xtsKey1       :: ByteString
-    , xtsKey2       :: ByteString
-    , xtsIV         :: ByteString
-    , xtsPlaintext  :: ByteString
-    , xtsCiphertext :: ByteString
+    { xtsKey1       :: ByteString -- ^ 1st XTS key
+    , xtsKey2       :: ByteString -- ^ 2nd XTS key
+    , xtsIV         :: ByteString -- ^ XTS IV
+    , xtsPlaintext  :: ByteString -- ^ plaintext
+    , xtsCiphertext :: ByteString -- ^ Ciphertext
     } deriving (Show,Eq)
 
 -- | AEAD KAT
@@ -53,6 +53,8 @@ data KAT_AEAD = KAT_AEAD
     , aeadTag        :: AuthTag    -- ^ expected tag
     } deriving (Show,Eq)
 
+-- | all the KATs. use defaultKATs to prevent compilation error
+-- from future expansion of this data structure
 data KATs = KATs
     { kat_ECB  :: [KAT_ECB]
     , kat_CBC  :: [KAT_CBC]
@@ -61,6 +63,7 @@ data KATs = KATs
     , kat_AEAD :: [KAT_AEAD]
     } deriving (Show,Eq)
 
+-- | the empty KATs
 defaultKATs :: KATs
 defaultKATs = KATs
     { kat_ECB  = []
@@ -70,6 +73,7 @@ defaultKATs = KATs
     , kat_AEAD = []
     }
 
+-- | tests related to KATs
 testKATs :: BlockCipher cipher => KATs -> cipher -> Test
 testKATs kats cipher = testGroup "KAT"
     (   maybeGroup makeECBTest "ECB" (kat_ECB kats)
