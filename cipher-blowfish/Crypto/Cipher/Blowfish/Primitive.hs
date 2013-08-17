@@ -9,7 +9,7 @@
 --           (as found in Crypto-4.2.4)
 
 module Crypto.Cipher.Blowfish.Primitive
-    ( Blowfish
+    ( Context
     , initBlowfish
     , encrypt
     , decrypt
@@ -25,29 +25,30 @@ import qualified Data.ByteString as B
 type Pbox = Vector Word32
 type Sbox = Vector Word32
 
-data Blowfish = BF Pbox Sbox Sbox Sbox Sbox
+-- | variable keyed blowfish state
+data Context = BF Pbox Sbox Sbox Sbox Sbox
 
-encrypt, decrypt :: Blowfish -> B.ByteString -> B.ByteString
+encrypt, decrypt :: Context -> B.ByteString -> B.ByteString
 encrypt = cipher . selectEncrypt
 decrypt = cipher . selectDecrypt
 
-selectEncrypt, selectDecrypt :: Blowfish -> (Pbox, Blowfish)
+selectEncrypt, selectDecrypt :: Context -> (Pbox, Context)
 selectEncrypt x@(BF p _ _ _ _) = (p, x)
 selectDecrypt x@(BF p _ _ _ _) = (V.reverse p, x)
 
-cipher :: (Pbox, Blowfish) -> B.ByteString -> B.ByteString
+cipher :: (Pbox, Context) -> B.ByteString -> B.ByteString
 cipher (p, bs) b
     | B.length b == 0 = B.empty
     | B.length b `mod` 8 /= 0 = error "invalid data length"
     | otherwise = B.concat $ doChunks 8 (fromW32Pair . coreCrypto p bs . toW32Pair) b
 
-initBlowfish :: B.ByteString -> Either String Blowfish
+initBlowfish :: B.ByteString -> Either String Context
 initBlowfish b
     | B.length b > (448 `div` 8) = fail "key too large"
     | B.length b == 0 = keyFromByteString (B.replicate (18*4) 0)
     | otherwise = keyFromByteString . B.pack . take (18*4) . cycle . B.unpack $ b
 
-keyFromByteString :: B.ByteString -> Either String Blowfish
+keyFromByteString :: B.ByteString -> Either String Context
 keyFromByteString k
     | B.length k /= (18 * 4) = fail "Incorrect expanded key length."
     | otherwise = return . bfMakeKey . (\ws -> V.generate 18 (ws!!)) . w8tow32 . B.unpack $ k
@@ -60,11 +61,11 @@ keyFromByteString k
                              (fromIntegral d) ) : w8tow32 xs
     w8tow32 _ = error $ "internal error: Crypto.Cipher.Blowfish:keyFromByteString"
 
-coreCrypto :: Pbox -> Blowfish -> (Word32, Word32) -> (Word32, Word32)
+coreCrypto :: Pbox -> Context -> (Word32, Word32) -> (Word32, Word32)
 coreCrypto p bs i = (\(l,r) -> (r `xor` p!17, l `xor` p!16))
                   $ V.foldl' (doRound bs) i (V.take 16 p)
   where
-    doRound :: Blowfish -> (Word32, Word32) -> Word32 -> (Word32, Word32)
+    doRound :: Context -> (Word32, Word32) -> Word32 -> (Word32, Word32)
     doRound (BF _ s0 s1 s2 s3) (l,r) pv =
         let newr = l `xor` pv
             newl = r `xor` (f newr)
@@ -77,10 +78,10 @@ coreCrypto p bs i = (\(l,r) -> (r `xor` p!17, l `xor` p!16))
                       d = s3 ! (fromIntegral $ t .&. 0xff)
                   in ((a + b) `xor` c) + d
 
-bfMakeKey :: Vector Word32 -> Blowfish
+bfMakeKey :: Vector Word32 -> Context
 bfMakeKey k = procKey (0,0) (BF (V.zipWith xor k iPbox) iSbox0 iSbox1 iSbox2 iSbox3) 0
 
-procKey :: (Word32, Word32) -> Blowfish -> Int -> Blowfish
+procKey :: (Word32, Word32) -> Context -> Int -> Context
 procKey _     tpbf                    1042 = tpbf
 procKey (l,r) tpbf@(BF p s0 s1 s2 s3)    i = procKey (nl,nr) (newbf i) (i+2)
   where (nl,nr) = coreCrypto p tpbf (l,r)
