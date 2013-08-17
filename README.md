@@ -7,7 +7,7 @@ Documentation: [crypto-cipher-types on hackage](http://hackage.haskell.org/packa
 Writing tests
 -------------
 
-Tests for blockcipher are already all included in crypto-cipher-tests.
+Tests for blockciphers are already all included in crypto-cipher-tests.
 
     import Crypto.Cipher.Tests
     main = defaultMain
