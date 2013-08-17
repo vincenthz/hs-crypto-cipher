@@ -32,7 +32,7 @@ newtype Blowfish448 = Blowfish448 Context
 #define INSTANCE_CIPHER(CSTR, NAME, KEYSIZE) \
 instance Cipher CSTR where \
     { cipherName _ = NAME \
-    ; cipherKeySize _ = Just KEYSIZE \
+    ; cipherKeySize _ = KeySizeFixed KEYSIZE \
     ; cipherInit k = either error CSTR $ initBlowfish (toBytes k) \
     }; \
 instance BlockCipher CSTR where \
