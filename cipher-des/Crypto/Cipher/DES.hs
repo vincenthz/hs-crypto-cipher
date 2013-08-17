@@ -21,7 +21,7 @@ data DES = DES Word64
 
 instance Cipher DES where
     cipherName    _ = "DES"
-    cipherKeySize _ = Just 8
+    cipherKeySize _ = KeySizeFixed 8
     cipherInit k    = initDES k
 
 instance BlockCipher DES where

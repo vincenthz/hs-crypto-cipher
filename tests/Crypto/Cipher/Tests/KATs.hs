@@ -129,8 +129,8 @@ testKATs kats cipher = testGroup "KAT"
         
         cipherMakeKey :: BlockCipher cipher => cipher -> ByteString -> Key cipher
         cipherMakeKey c bs = case makeKey bs of
-                                Nothing -> error ("invalid key " ++ show bs ++ " for " ++ show (cipherName c))
-                                Just k  -> k
+                                Left e -> error ("invalid key " ++ show bs ++ " for " ++ show (cipherName c) ++ " " ++ show e)
+                                Right k  -> k
 
         cipherMakeIV :: BlockCipher cipher => cipher -> ByteString -> IV cipher
         cipherMakeIV _ bs = fromJust $ makeIV bs

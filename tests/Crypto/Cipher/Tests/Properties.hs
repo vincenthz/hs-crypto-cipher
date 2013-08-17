@@ -49,9 +49,12 @@ instance Show (AEADUnit a) where
 generateKey :: BlockCipher a => Gen (Key a)
 generateKey = keyFromCipher undefined
   where keyFromCipher :: BlockCipher a => a -> Gen (Key a)
-        keyFromCipher cipher = case cipherKeySize cipher of
-                                Just sz -> fromJust . makeKey . B.pack <$> replicateM sz arbitrary
-                                Nothing -> fromJust . makeKey . B.pack <$> (choose (1,66) >>= \sz -> replicateM sz arbitrary)
+        keyFromCipher cipher = do
+            sz <- case cipherKeySize cipher of
+                         KeySizeRange low high -> choose (low, high)
+                         KeySizeFixed v -> return v
+                         KeySizeEnum l  -> elements l
+            either (error . show) id . makeKey . B.pack <$> replicateM sz arbitrary
 
 -- | Generate an arbitrary valid IV for a specific block cipher
 generateIv :: BlockCipher a => Gen (IV a)

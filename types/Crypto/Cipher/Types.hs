@@ -17,6 +17,8 @@ module Crypto.Cipher.Types
     , BlockCipher(..)
     , StreamCipher(..)
     , DataUnitOffset
+    , KeySizeSpecifier(..)
+    , KeyError(..)
     , AEAD(..)
     , AEADState(..)
     , AEADMode(..)
@@ -51,6 +53,20 @@ import Crypto.Cipher.Types.GF
 -- | Offset inside an XTS data unit, measured in block size.
 type DataUnitOffset = Word32
 
+-- | Possible Error that can be reported when initializating a key
+data KeyError =
+      KeyErrorTooSmall
+    | KeyErrorTooBig
+    | KeyErrorInvalid String
+    deriving (Show,Eq)
+
+-- | Different specifier for key size in bytes
+data KeySizeSpecifier =
+      KeySizeRange Int Int -- ^ in the range [min,max]
+    | KeySizeEnum  [Int]   -- ^ one of the specified values
+    | KeySizeFixed Int     -- ^ a specific size
+    deriving (Show,Eq)
+
 -- | Symmetric cipher class.
 class Cipher cipher where
     -- | Initialize a cipher context from a key
@@ -59,7 +75,7 @@ class Cipher cipher where
     cipherName    :: cipher -> String
     -- | return the size of the key required for this cipher.
     -- Some cipher accept any size for key
-    cipherKeySize :: cipher -> Maybe Int
+    cipherKeySize :: cipher -> KeySizeSpecifier
 
 -- | Symmetric stream cipher class
 class Cipher cipher => StreamCipher cipher where
@@ -240,14 +256,19 @@ ivAdd (IV b) i = IV $ snd $ B.mapAccumR addCarry i b
                            in (hi + (nw `shiftR` 8), fromIntegral nw)
 
 -- | Create a Key for a specified cipher
-makeKey :: (ToSecureMem b, Cipher c) => b -> Maybe (Key c)
-makeKey b = toKey undefined (toSecureMem b)
-  where toKey :: Cipher c => c -> SecureMem -> Maybe (Key c)
-        toKey cipher sm =
-            case cipherKeySize cipher of
-                Nothing                           -> Just $ Key sm
-                Just sz | sz == byteableLength sm -> Just $ Key sm
-                        | otherwise               -> Nothing
+makeKey :: (ToSecureMem b, Cipher c) => b -> Either KeyError (Key c)
+makeKey b = toKey undefined
+  where sm    = toSecureMem b
+        smLen = byteableLength sm
+        toKey :: Cipher c => c -> Either KeyError (Key c)
+        toKey cipher = case cipherKeySize cipher of
+            KeySizeRange mi ma | smLen < mi -> Left KeyErrorTooSmall
+                               | smLen > ma -> Left KeyErrorTooBig
+                               | otherwise  -> Right $ Key sm
+            KeySizeEnum l | smLen `elem` l  -> Right $ Key sm
+                          | otherwise       -> Left $ KeyErrorInvalid ("valid size: " ++ show l)
+            KeySizeFixed v | smLen < v      -> Right $ Key sm
+                           | otherwise      -> Left $ KeyErrorInvalid ("valid size: " ++ show v)
 
 cbcEncryptGeneric :: BlockCipher cipher => cipher -> IV cipher -> ByteString -> ByteString
 cbcEncryptGeneric cipher (IV ivini) input = B.concat $ doEnc ivini $ chunk (blockSize cipher) input

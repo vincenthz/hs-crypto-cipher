@@ -37,22 +37,22 @@ data DES_EDE2 = DES_EDE2 Word64 Word64 -- key1 and key3 are equal
 
 instance Cipher DES_EEE3 where
     cipherName    _ = "3DES_EEE"
-    cipherKeySize _ = Just 24
+    cipherKeySize _ = KeySizeFixed 24
     cipherInit k    = init3DES DES_EEE3 k
 
 instance Cipher DES_EDE3 where
     cipherName    _ = "3DES_EDE"
-    cipherKeySize _ = Just 24
+    cipherKeySize _ = KeySizeFixed 24
     cipherInit k    = init3DES DES_EDE3 k
 
 instance Cipher DES_EDE2 where
     cipherName    _ = "2DES_EDE"
-    cipherKeySize _ = Just 16
+    cipherKeySize _ = KeySizeFixed 16
     cipherInit k    = init2DES DES_EDE2 k
 
 instance Cipher DES_EEE2 where
     cipherName    _ = "2DES_EEE"
-    cipherKeySize _ = Just 16
+    cipherKeySize _ = KeySizeFixed 16
     cipherInit k    = init2DES DES_EEE2 k
 
 instance BlockCipher DES_EEE3 where

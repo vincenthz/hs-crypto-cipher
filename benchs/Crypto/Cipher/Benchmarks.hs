@@ -25,7 +25,6 @@ import Criterion.Measurement
 import Text.Printf
 import Text.PrettyPrint hiding (Mode, mode)
 
-import Data.Maybe
 import Control.Monad.Trans
 
 import qualified Data.ByteString as B
@@ -162,9 +161,10 @@ instanciateCiphers ciphers = map proxy ciphers
         instanciate :: BlockCipher a => a -> a
         instanciate c =
             let bs = case cipherKeySize c of
-                            Nothing -> B.replicate 1 0
-                            Just sz -> B.replicate sz 1
-             in cipherInit (fromJust $ makeKey bs)
+                            KeySizeRange low _ -> B.replicate low 0
+                            KeySizeFixed sz    -> B.replicate sz 1
+                            KeySizeEnum l      -> B.replicate (head l) 2
+             in cipherInit (either (error . show) id $ makeKey bs)
 
 -- | DefaultMain: parse command line arguments, run benchmarks
 -- and report
