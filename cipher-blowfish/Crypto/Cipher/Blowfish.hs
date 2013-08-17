@@ -7,7 +7,8 @@
 -- Portability : good
 --
 module Crypto.Cipher.Blowfish
-    ( Blowfish64
+    ( Blowfish
+    , Blowfish64
     , Blowfish128
     , Blowfish256
     , Blowfish448
@@ -16,6 +17,9 @@ module Crypto.Cipher.Blowfish
 import Data.Byteable
 import Crypto.Cipher.Types
 import Crypto.Cipher.Blowfish.Primitive
+
+-- | variable keyed blowfish state
+newtype Blowfish = Blowfish Context
 
 -- | 64 bit keyed blowfish state
 newtype Blowfish64 = Blowfish64 Context
@@ -28,6 +32,16 @@ newtype Blowfish256 = Blowfish256 Context
 
 -- | 448 bit keyed blowfish state
 newtype Blowfish448 = Blowfish448 Context
+
+instance Cipher Blowfish where
+    cipherName _    = "blowfish"
+    cipherKeySize _ = KeySizeRange 6 56
+    cipherInit k = either error Blowfish $ initBlowfish (toBytes k)
+
+instance BlockCipher Blowfish where
+    blockSize _ = 8
+    ecbEncrypt (Blowfish bf) = encrypt bf
+    ecbDecrypt (Blowfish bf) = decrypt bf
 
 #define INSTANCE_CIPHER(CSTR, NAME, KEYSIZE) \
 instance Cipher CSTR where \
