@@ -11,9 +11,6 @@ Category:            Cryptography
 Build-Type:          Simple
 Homepage:            http://github.com/vincenthz/hs-crypto-cipher
 Cabal-Version:       >=1.8
-Extra-Source-Files:  Tests/*.hs
-                     cbits/*.h
-                     cbits/aes_x86ni_impl.c
 
 Library
   Build-Depends:     base >= 4 && < 5
