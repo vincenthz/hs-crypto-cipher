@@ -267,7 +267,7 @@ makeKey b = toKey undefined
                                | otherwise  -> Right $ Key sm
             KeySizeEnum l | smLen `elem` l  -> Right $ Key sm
                           | otherwise       -> Left $ KeyErrorInvalid ("valid size: " ++ show l)
-            KeySizeFixed v | smLen < v      -> Right $ Key sm
+            KeySizeFixed v | smLen == v     -> Right $ Key sm
                            | otherwise      -> Left $ KeyErrorInvalid ("valid size: " ++ show v)
 
 cbcEncryptGeneric :: BlockCipher cipher => cipher -> IV cipher -> ByteString -> ByteString
