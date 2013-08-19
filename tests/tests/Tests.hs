@@ -13,7 +13,7 @@ data XorCipher = XorCipher
 instance Cipher XorCipher where
     cipherInit _    = XorCipher
     cipherName _    = "xor"
-    cipherKeySize _ = Just 0
+    cipherKeySize _ = KeySizeRange 1 32
 
 instance BlockCipher XorCipher where
     blockSize  _   = 16
