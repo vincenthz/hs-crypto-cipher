@@ -1,5 +1,5 @@
 Name:                cipher-des
-Version:             0.0.1
+Version:             0.0.2
 Description:         DES and 3DES primitives
 License:             BSD3
 License-file:        LICENSE
