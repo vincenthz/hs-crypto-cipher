@@ -20,3 +20,4 @@ TODO
 
 * cipher-des: slow
 * cipher-blowfish: slow
+* cipher-camellia: slow, endianness problem
