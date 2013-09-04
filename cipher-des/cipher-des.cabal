@@ -18,7 +18,6 @@ Library
                    , byteable
                    , crypto-cipher-types >= 0.0.3
                    , securemem >= 0.1.2
-                   , cereal
   Exposed-modules:   Crypto.Cipher.DES
                    , Crypto.Cipher.TripleDES
   Other-modules:     Crypto.Cipher.DES.Primitive
