@@ -1,10 +1,6 @@
 Name:                cryptocipher
-Version:             0.5.2
-Description:
-    Symmetrical block and stream ciphers.
-    .
-    This package is eventually going away in this form, and should be considered deprecated.
-    use 'cipher-aes' for AES, 'cipher-blowfish' for Blowfish, 'cipher-des' for DES and 3DES.
+Version:             0.6.0
+Description:         Symmetrical block and stream ciphers.
 License:             BSD3
 License-file:        LICENSE
 Copyright:           Vincent Hanquez <vincent@snarc.org>
@@ -15,60 +11,17 @@ Category:            Cryptography
 Build-Type:          Simple
 Homepage:            http://github.com/vincenthz/hs-crypto-cipher
 Cabal-Version:       >=1.8
-Extra-Source-Files:  Tests/*.hs
-
-Flag benchmark
-  Description:       Build benchmarks
-  Default:           False
 
 Library
   Build-Depends:     base >= 4 && < 5
-                   , bytestring
-                   , vector >= 0.7
-                   , cpu >= 0.1 && < 0.2
-                   , ghc-prim
-                   , primitive
+                   , crypto-cipher-types
                    , cipher-aes
                    , cipher-rc4
                    , cipher-des
                    , cipher-blowfish
-                   , cereal
-  Exposed-modules:   Crypto.Cipher.RC4
-                     Crypto.Cipher.AES
-                     Crypto.Cipher.Blowfish
-                     Crypto.Cipher.Camellia
-                     Crypto.Cipher.TripleDES
-                     Crypto.Cipher.DES
+                   , cipher-camellia
+  Exposed-modules:   Crypto.Cipher
   ghc-options:       -Wall
-
-Test-Suite test-cryptocipher
-  type:              exitcode-stdio-1.0
-  hs-source-dirs:    Tests
-  Main-Is:           tests.hs
-  Build-depends:     base >= 4 && < 5
-                   , crypto-api >= 0.5
-                   , cryptocipher
-                   , bytestring
-                   , cryptohash
-                   , vector
-                   , entropy
-                   , QuickCheck >= 2
-                   , test-framework >= 0.3.3
-                   , test-framework-quickcheck2 >= 0.2.9
-
-Executable           Benchmarks
-  hs-source-dirs:    Benchmarks
-  Main-Is:           Benchmarks.hs
-  if flag(benchmark)
-    Buildable:       True
-    Build-depends:   base >= 4 && < 5
-                   , bytestring
-                   , crypto-api
-                   , cryptocipher
-                   , criterion
-                   , mtl
-  else
-    Buildable:       False
 
 source-repository head
   type:     git
