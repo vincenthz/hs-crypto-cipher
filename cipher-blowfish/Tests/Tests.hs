@@ -5,6 +5,7 @@ import Test.Framework (defaultMain, testGroup)
 import Crypto.Cipher.Blowfish
 import Crypto.Cipher.Types
 import Crypto.Cipher.Tests
+import Data.ByteString.Char8 () -- orphan IsString for older bytestring versions
 
 vectors_ecb = -- key plaintext cipher
     [ KAT_ECB "\x00\x00\x00\x00\x00\x00\x00\x00" "\x00\x00\x00\x00\x00\x00\x00\x00" "\x4E\xF9\x97\x45\x61\x98\xDD\x78"
