@@ -13,6 +13,7 @@ import Test.QuickCheck.Test
 
 import Data.Byteable
 import qualified Data.ByteString as B
+import Data.ByteString.Char8 () -- orphan IsString for older bytestring versions
 import qualified Crypto.Cipher.DES as DES
 import Crypto.Cipher.Types
 import Crypto.Cipher.Tests
