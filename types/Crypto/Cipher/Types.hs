@@ -79,10 +79,8 @@ class Cipher cipher where
 
 -- | Symmetric stream cipher class
 class Cipher cipher => StreamCipher cipher where
-    -- | Encrypt using the stream cipher
-    streamEncrypt :: cipher -> ByteString -> (ByteString, cipher)
-    -- | Decrypt using the stream cipher
-    streamDecrypt :: cipher -> ByteString -> (ByteString, cipher)
+    -- | Combine using the stream cipher
+    streamCombine :: cipher -> ByteString -> (ByteString, cipher)
 
 -- | Symmetric block cipher class
 class Cipher cipher => BlockCipher cipher where
