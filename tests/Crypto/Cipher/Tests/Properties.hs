@@ -34,6 +34,9 @@ data XTSUnit a = XTSUnit (Key a) (Key a) (IV a) B.ByteString
 data AEADUnit a = AEADUnit (Key a) B.ByteString B.ByteString B.ByteString
     deriving (Eq)
 
+data StreamUnit a = StreamUnit (Key a) B.ByteString
+    deriving (Eq)
+
 instance Show (ECBUnit a) where
     show (ECBUnit key b) = "ECB(key=" ++ show (toBytes key) ++ ",input=" ++ show b ++ ")"
 instance Show (CBCUnit a) where
@@ -44,11 +47,13 @@ instance Show (XTSUnit a) where
     show (XTSUnit key1 key2 iv b) = "XTS(key1=" ++ show (toBytes key1) ++ ",key2=" ++ show (toBytes key2) ++ ",iv=" ++ show (toBytes iv) ++ ",input=" ++ show b ++ ")"
 instance Show (AEADUnit a) where
     show (AEADUnit key iv aad b) = "AEAD(key=" ++ show (toBytes key) ++ ",iv=" ++ show iv ++ ",aad=" ++ show (toBytes aad) ++ ",input=" ++ show b ++ ")"
+instance Show (StreamUnit a) where
+    show (StreamUnit key b) = "Stream(key=" ++ show (toBytes key) ++ ",input=" ++ show b ++ ")"
 
 -- | Generate an arbitrary valid key for a specific block cipher
-generateKey :: BlockCipher a => Gen (Key a)
+generateKey :: Cipher a => Gen (Key a)
 generateKey = keyFromCipher undefined
-  where keyFromCipher :: BlockCipher a => a -> Gen (Key a)
+  where keyFromCipher :: Cipher a => a -> Gen (Key a)
         keyFromCipher cipher = do
             sz <- case cipherKeySize cipher of
                          KeySizeRange low high -> choose (low, high)
@@ -100,6 +105,10 @@ instance BlockCipher a => Arbitrary (AEADUnit a) where
                          <*> generatePlaintext
                          <*> generatePlaintext
 
+instance StreamCipher a => Arbitrary (StreamUnit a) where
+    arbitrary = StreamUnit <$> generateKey
+                           <*> generatePlaintext
+
 -- | Test a generic block cipher for properties
 -- related to block cipher modes.
 testModes :: BlockCipher a => a -> [Test]
@@ -149,6 +158,13 @@ testModes cipher =
                         dTag           = aeadFinalize aeadD (blockSize ctx)
                      in (plaintext `assertEq` dText) && (toBytes eTag `assertEq` toBytes dTag)
                 Nothing -> True
+
+testStream :: StreamCipher a => a -> [Test]
+testStream cipher = [testProperty "combine.combine==id" (testStreamUnit cipher)]
+  where testStreamUnit :: StreamCipher a => a -> (StreamUnit a -> Bool)
+        testStreamUnit _ (StreamUnit (cipherInit -> ctx) plaintext) =
+            let cipherText = fst $ streamCombine ctx plaintext
+             in fst (streamCombine ctx cipherText) `assertEq` plaintext
 
 assertEq :: B.ByteString -> B.ByteString -> Bool
 assertEq b1 b2 | b1 /= b2  = error ("b1: " ++ show b1 ++ " b2: " ++ show b2)

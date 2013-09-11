@@ -8,6 +8,7 @@ import qualified Data.ByteString as B
 import Data.Bits (xor)
 
 -- | the XOR cipher is so awesome that it doesn't need any key or state.
+-- Also it's a stream and block cipher at the same time.
 data XorCipher = XorCipher
 
 instance Cipher XorCipher where
@@ -20,6 +21,12 @@ instance BlockCipher XorCipher where
     ecbEncrypt _ b = B.pack $ B.zipWith xor (B.replicate (B.length b) 0xa5) b
     ecbDecrypt _ b = B.pack $ B.zipWith xor (B.replicate (B.length b) 0xa5) b
 
-tests = testBlockCipher defaultKATs (undefined :: XorCipher)
+instance StreamCipher XorCipher where
+    streamCombine _ b = (B.pack $ B.zipWith xor (B.replicate (B.length b) 0x12) b, XorCipher)
+
+tests =
+    [ testBlockCipher defaultKATs (undefined :: XorCipher)
+    , testStreamCipher defaultStreamKATs (undefined :: StreamCipher)
+    ]
 
 main = defaultMain [tests]

@@ -31,3 +31,9 @@ testBlockCipher kats cipher = testGroup (cipherName cipher)
     (  (if kats == defaultKATs  then [] else [testKATs kats cipher])
     ++ testModes cipher
     )
+
+testStreamCipher :: StreamCipher a => [KAT_Stream] -> a -> Test
+testStreamCipher kats cipher = testGroup (cipherName cipher)
+    (  (if kats == defaultStreamKATs then [] else [testStreamKATs kats cipher])
+    ++ testStream cipher
+    )

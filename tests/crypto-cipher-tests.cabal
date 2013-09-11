@@ -1,5 +1,5 @@
 Name:                crypto-cipher-tests
-Version:             0.0.4
+Version:             0.0.5
 Synopsis:            Generic cryptography cipher tests
 Description:         Generic cryptography cipher tests
 License:             BSD3
@@ -27,7 +27,7 @@ Library
                    , bytestring
                    , byteable >= 0.1.1
                    , securemem >= 0.1.1
-                   , crypto-cipher-types >= 0.0.3
+                   , crypto-cipher-types >= 0.0.5
   ghc-options:       -Wall -fwarn-tabs
 
 Test-Suite test-crypto-cipher-dummy

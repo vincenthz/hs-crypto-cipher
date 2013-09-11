@@ -11,7 +11,10 @@
 {-# LANGUAGE Rank2Types #-}
 module Crypto.Cipher.Benchmarks
     ( defaultMain
+    , defaultMainAll
     , GBlockCipher(..)
+    , GStreamCipher(..)
+    , GCipher(..)
     ) where
 
 import Control.Applicative
@@ -39,6 +42,13 @@ import Data.Char (toUpper)
 
 -- | Generic Block cipher that wrap a specific block cipher.
 data GBlockCipher = forall a . BlockCipher a => GBlockCipher a
+
+-- | Generic Stream cipher that wrap a specific stream cipher.
+data GStreamCipher = forall a . StreamCipher a => GStreamCipher a
+
+-- | Any generic cipher (block or stream)
+data GCipher = Block GBlockCipher
+             | Stream GStreamCipher
 
 data Mode = ECB
           | CBC
@@ -116,7 +126,7 @@ doOne iters env szs name f = do
             | otherwise         = printf "%.1f K/s" val
 
 
-runBench :: Int -> Bool -> [Int] -> [Mode] -> [GBlockCipher] -> Criterion ()
+runBench :: Int -> Bool -> [Int] -> [Mode] -> [GCipher] -> Criterion ()
 runBench iters showTime szs modes ciphers = do
     env     <- measureEnvironment
     reports <- concat <$> mapM (runBenchCipher env) ciphers
@@ -125,10 +135,15 @@ runBench iters showTime szs modes ciphers = do
            
     liftIO $ putStrLn $ show doc
     
-  where runBenchCipher env (GBlockCipher cipher) = do
+  where runBenchCipher env (Block (GBlockCipher cipher)) = do
             let name   = cipherName cipher
                 benchs = modesToBench cipher modes
             mapM (\(benchMode, benchF) -> doOne iters env szs (name ++ "-" ++ show benchMode) benchF) benchs
+
+        runBenchCipher env (Stream (GStreamCipher cipher)) = do
+            let name   = cipherName cipher
+            (:[]) <$> doOne iters env szs name (fst . streamCombine cipher)
+
         toLine (name, szReports) =
             hsep (col1 name : map field szReports)
         field | showTime  = textOf 12 . reportSecs
@@ -154,11 +169,12 @@ wordsWhen p s =
         s' -> w : wordsWhen p s''
               where (w, s'') = break p s'
 
-instanciateCiphers :: [GBlockCipher] -> [GBlockCipher]
+instanciateCiphers :: [GCipher] -> [GCipher]
 instanciateCiphers ciphers = map proxy ciphers
-  where proxy :: GBlockCipher -> GBlockCipher
-        proxy (GBlockCipher c) = GBlockCipher $ instanciate c
-        instanciate :: BlockCipher a => a -> a
+  where proxy :: GCipher -> GCipher
+        proxy (Block (GBlockCipher c))   = Block (GBlockCipher $ instanciate c)
+        proxy (Stream (GStreamCipher c)) = Stream (GStreamCipher $ instanciate c)
+        instanciate :: Cipher a => a -> a
         instanciate c =
             let bs = case cipherKeySize c of
                             KeySizeRange low _ -> B.replicate low 0
@@ -168,8 +184,8 @@ instanciateCiphers ciphers = map proxy ciphers
 
 -- | DefaultMain: parse command line arguments, run benchmarks
 -- and report
-defaultMain :: [GBlockCipher] -> IO ()
-defaultMain ciphers = do
+defaultMainAll :: [GCipher] -> IO ()
+defaultMainAll ciphers = do
     args <- getArgs
     case getOpt Permute opts args of
         (os,_,[]) | Help `elem` os -> do putStrLn (usageInfo "crypto-cipher-benchmark" opts)
@@ -183,7 +199,6 @@ defaultMain ciphers = do
                                                 Iter s      -> (sp, mp, read s)
                                                 CipherArg _ -> (sp, mp, it)
                                                 _           -> (sp, mp, it)
-            
                                             ) (defaultSzs, defaultModes, 100) os
                                     withConfig defaultConfig $ runBench iters (Time `elem` os) ss ms (instanciateCiphers ciphers)
         (_,_,err) -> error (show err)
@@ -195,3 +210,8 @@ defaultMain ciphers = do
             , Option ['t'] ["time"] (NoArg Time) "show average time instead of average speed"
             , Option ['h'] ["help"] (NoArg Help) "get help"
             ]
+
+-- | DefaultMain: parse command line arguments, run benchmarks
+-- and report
+defaultMain :: [GBlockCipher] -> IO ()
+defaultMain ciphers = defaultMainAll $ map Block ciphers

@@ -3,7 +3,7 @@ module Crypto.Cipher.Tests.KATs
 
 import Data.ByteString (ByteString)
 
-import Test.Framework (Test, testGroup)
+import Test.Framework (Test, testGroup, TestName)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit ((@?=))
 import Crypto.Cipher.Types
@@ -63,6 +63,13 @@ data KATs = KATs
     , kat_AEAD :: [KAT_AEAD]
     } deriving (Show,Eq)
 
+-- | KAT for Stream cipher
+data KAT_Stream = KAT_Stream
+    { streamKey        :: ByteString
+    , streamPlaintext  :: ByteString
+    , streamCiphertext :: ByteString
+    } deriving (Show,Eq)
+
 -- | the empty KATs
 defaultKATs :: KATs
 defaultKATs = KATs
@@ -72,6 +79,10 @@ defaultKATs = KATs
     , kat_XTS  = []
     , kat_AEAD = []
     }
+
+-- | the empty KATs for stream
+defaultStreamKATs :: [KAT_Stream]
+defaultStreamKATs = []
 
 -- | tests related to KATs
 testKATs :: BlockCipher cipher => KATs -> cipher -> Test
@@ -121,16 +132,25 @@ testKATs kats cipher = testGroup "KAT"
                 etag = aeadFinalize aeadEFinal (aeadTaglen d)
                 dtag = aeadFinalize aeadDFinal (aeadTaglen d)
                
-        maybeGroup mkTest groupName l
-            | null l    = []
-            | otherwise = [testGroup groupName (concatMap (\(i, d) -> mkTest (show i) d) $ zip nbs l)]
-        nbs :: [Int]
-        nbs = [0..]
-        
-        cipherMakeKey :: BlockCipher cipher => cipher -> ByteString -> Key cipher
-        cipherMakeKey c bs = case makeKey bs of
-                                Left e -> error ("invalid key " ++ show bs ++ " for " ++ show (cipherName c) ++ " " ++ show e)
-                                Right k  -> k
-
         cipherMakeIV :: BlockCipher cipher => cipher -> ByteString -> IV cipher
         cipherMakeIV _ bs = fromJust $ makeIV bs
+
+testStreamKATs :: StreamCipher cipher => [KAT_Stream] -> cipher -> Test
+testStreamKATs kats cipher = testGroup "KAT" $ maybeGroup makeStreamTest "Stream" kats
+  where makeStreamTest i d =
+            [ testCase ("E" ++ i) (fst (streamCombine ctx (streamPlaintext d)) @?= streamCiphertext d)
+            , testCase ("D" ++ i) (fst (streamCombine ctx (streamCiphertext d)) @?= streamPlaintext d)
+            ]
+          where ctx = cipherInit (cipherMakeKey cipher $ streamKey d)
+
+cipherMakeKey :: Cipher cipher => cipher -> ByteString -> Key cipher
+cipherMakeKey c bs = case makeKey bs of
+                        Left e -> error ("invalid key " ++ show bs ++ " for " ++ show (cipherName c) ++ " " ++ show e)
+                        Right k  -> k
+
+maybeGroup :: (String -> t -> [Test]) -> TestName -> [t] -> [Test]
+maybeGroup mkTest groupName l
+    | null l    = []
+    | otherwise = [testGroup groupName (concatMap (\(i, d) -> mkTest (show i) d) $ zip nbs l)]
+  where nbs :: [Int]
+        nbs = [0..]
