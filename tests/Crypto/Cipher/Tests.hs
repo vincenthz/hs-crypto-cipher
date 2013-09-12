@@ -9,9 +9,12 @@
 {-# LANGUAGE ViewPatterns #-}
 module Crypto.Cipher.Tests
     ( testBlockCipher
+    , testStreamCipher
     -- * KATs
     , defaultKATs
+    , defaultStreamKATs
     , KATs(..)
+    , KAT_Stream(..)
     , KAT_ECB(..)
     , KAT_CBC(..)
     , KAT_CTR(..)
@@ -32,6 +35,7 @@ testBlockCipher kats cipher = testGroup (cipherName cipher)
     ++ testModes cipher
     )
 
+-- | Return tests for a specific streamcipher and a list of KATs
 testStreamCipher :: StreamCipher a => [KAT_Stream] -> a -> Test
 testStreamCipher kats cipher = testGroup (cipherName cipher)
     (  (if kats == defaultStreamKATs then [] else [testStreamKATs kats cipher])
