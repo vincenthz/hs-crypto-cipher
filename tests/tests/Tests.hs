@@ -26,7 +26,7 @@ instance StreamCipher XorCipher where
 
 tests =
     [ testBlockCipher defaultKATs (undefined :: XorCipher)
-    , testStreamCipher defaultStreamKATs (undefined :: StreamCipher)
+    , testStreamCipher defaultStreamKATs (undefined :: XorCipher)
     ]
 
-main = defaultMain [tests]
+main = defaultMain tests
