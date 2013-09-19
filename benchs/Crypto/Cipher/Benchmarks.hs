@@ -53,6 +53,7 @@ data GCipher = Block GBlockCipher
 data Mode = ECB
           | CBC
           | CTR
+          | CFB
           | XTS
           | OCB
           | CCM
@@ -76,6 +77,7 @@ doCipher env nbIter szs f = mapM getMeanFromBench szs
 modeToBench :: BlockCipher cipher => cipher -> Mode -> Maybe (B.ByteString -> B.ByteString)
 modeToBench cipher ECB = Just $ ecbEncrypt cipher
 modeToBench cipher CBC = Just $ cbcEncrypt cipher nullIV
+modeToBench cipher CFB = Just $ cfbEncrypt cipher nullIV
 modeToBench cipher CTR = Just $ ctrCombine cipher nullIV
 modeToBench cipher XTS
     | blockSize cipher == 16 = Just $ xtsEncrypt (cipher, cipher) nullIV 0

@@ -107,6 +107,17 @@ class Cipher cipher => BlockCipher cipher where
     cbcDecrypt :: cipher -> IV cipher -> ByteString -> ByteString
     cbcDecrypt = cbcDecryptGeneric
 
+    -- | encrypt using the CFB mode.
+    --
+    -- input need to be a multiple of the blocksize
+    cfbEncrypt :: cipher -> IV cipher -> ByteString -> ByteString
+    cfbEncrypt = cfbEncryptGeneric
+    -- | decrypt using the CFB mode.
+    --
+    -- input need to be a multiple of the blocksize
+    cfbDecrypt :: cipher -> IV cipher -> ByteString -> ByteString
+    cfbDecrypt = cfbDecryptGeneric
+
     -- | combine using the CTR mode.
     --
     -- CTR mode produce a stream of randomized data that is combined
@@ -280,6 +291,20 @@ cbcDecryptGeneric cipher (IV ivini) input = B.concat $ doDec ivini $ chunk (bloc
   where doDec _  []     = []
         doDec iv (i:is) =
             let o = bxor iv $ ecbDecrypt cipher i
+             in o : doDec i is
+
+cfbEncryptGeneric :: BlockCipher cipher => cipher -> IV cipher -> ByteString -> ByteString
+cfbEncryptGeneric cipher (IV ivini) input = B.concat $ doEnc ivini $ chunk (blockSize cipher) input
+  where doEnc _  []     = []
+        doEnc iv (i:is) =
+            let o = bxor i $ ecbEncrypt cipher iv
+             in o : doEnc o is
+
+cfbDecryptGeneric :: BlockCipher cipher => cipher -> IV cipher -> ByteString -> ByteString
+cfbDecryptGeneric cipher (IV ivini) input = B.concat $ doDec ivini $ chunk (blockSize cipher) input
+  where doDec _  []     = []
+        doDec iv (i:is) =
+            let o = bxor i $ ecbEncrypt cipher iv
              in o : doDec i is
 
 ctrCombineGeneric :: BlockCipher cipher => cipher -> IV cipher -> ByteString -> ByteString

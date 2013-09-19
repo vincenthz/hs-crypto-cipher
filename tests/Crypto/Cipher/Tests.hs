@@ -17,6 +17,7 @@ module Crypto.Cipher.Tests
     , KAT_Stream(..)
     , KAT_ECB(..)
     , KAT_CBC(..)
+    , KAT_CFB(..)
     , KAT_CTR(..)
     , KAT_XTS(..)
     , KAT_AEAD(..)

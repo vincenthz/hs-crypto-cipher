@@ -24,6 +24,14 @@ data KAT_CBC = KAT_CBC
     , cbcCiphertext :: ByteString -- ^ Ciphertext
     } deriving (Show,Eq)
 
+-- | CFB KAT
+data KAT_CFB = KAT_CFB
+    { cfbKey        :: ByteString -- ^ Key
+    , cfbIV         :: ByteString -- ^ IV
+    , cfbPlaintext  :: ByteString -- ^ Plaintext
+    , cfbCiphertext :: ByteString -- ^ Ciphertext
+    } deriving (Show,Eq)
+
 -- | CTR KAT
 data KAT_CTR = KAT_CTR
     { ctrKey        :: ByteString -- ^ Key
@@ -58,6 +66,7 @@ data KAT_AEAD = KAT_AEAD
 data KATs = KATs
     { kat_ECB  :: [KAT_ECB]
     , kat_CBC  :: [KAT_CBC]
+    , kat_CFB  :: [KAT_CFB]
     , kat_CTR  :: [KAT_CTR]
     , kat_XTS  :: [KAT_XTS]
     , kat_AEAD :: [KAT_AEAD]
@@ -75,6 +84,7 @@ defaultKATs :: KATs
 defaultKATs = KATs
     { kat_ECB  = []
     , kat_CBC  = []
+    , kat_CFB  = []
     , kat_CTR  = []
     , kat_XTS  = []
     , kat_AEAD = []
@@ -89,6 +99,7 @@ testKATs :: BlockCipher cipher => KATs -> cipher -> Test
 testKATs kats cipher = testGroup "KAT"
     (   maybeGroup makeECBTest "ECB" (kat_ECB kats)
      ++ maybeGroup makeCBCTest "CBC" (kat_CBC kats)
+     ++ maybeGroup makeCFBTest "CFB" (kat_CFB kats)
      ++ maybeGroup makeCTRTest "CTR" (kat_CTR kats)
      ++ maybeGroup makeXTSTest "XTS" (kat_XTS kats)
      ++ maybeGroup makeAEADTest "AEAD" (kat_AEAD kats)
@@ -104,6 +115,12 @@ testKATs kats cipher = testGroup "KAT"
             ]
           where ctx = cipherInit (cipherMakeKey cipher $ cbcKey d)
                 iv  = cipherMakeIV cipher $ cbcIV d
+        makeCFBTest i d =
+            [ testCase ("E" ++ i) (cfbEncrypt ctx iv (cfbPlaintext d) @?= cfbCiphertext d)
+            , testCase ("D" ++ i) (cfbDecrypt ctx iv (cfbCiphertext d) @?= cfbPlaintext d)
+            ]
+          where ctx = cipherInit (cipherMakeKey cipher $ cfbKey d)
+                iv  = cipherMakeIV cipher $ cfbIV d
         makeCTRTest i d =
             [ testCase ("E" ++ i) (ctrCombine ctx iv (ctrPlaintext d) @?= ctrCiphertext d)
             , testCase ("D" ++ i) (ctrCombine ctx iv (ctrCiphertext d) @?= ctrPlaintext d)
