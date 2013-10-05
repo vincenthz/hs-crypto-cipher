@@ -23,6 +23,9 @@ module Crypto.Cipher.Types
     , AEADState(..)
     , AEADMode(..)
     , AEADModeImpl(..)
+    -- * CFB8 mode
+    , cfb8Encrypt
+    , cfb8Decrypt
     -- * AEAD
     , aeadAppendHeader
     , aeadEncrypt
@@ -45,10 +48,13 @@ module Crypto.Cipher.Types
 import Data.SecureMem
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Internal as B (unsafeCreate)
 import Data.Byteable
 import Data.Word
 import Data.Bits (shiftR, xor)
 import Crypto.Cipher.Types.GF
+import Foreign.Storable (poke)
+import Foreign.Ptr (plusPtr)
 
 -- | Offset inside an XTS data unit, measured in block size.
 type DataUnitOffset = Word32
@@ -335,6 +341,35 @@ xtsGeneric f (cipher, tweakCipher) iv sPoint input = B.concat $ doXts iniTweak $
             let o = bxor (f cipher $ bxor i tweak) tweak
              in o : doXts (xtsGFMul tweak) is
 
+-- | Encrypt using CFB mode in 8 bit output
+--
+-- Effectively turn a Block cipher in CFB mode into a Stream cipher
+cfb8Encrypt :: BlockCipher a => a -> IV a -> B.ByteString -> B.ByteString
+cfb8Encrypt ctx origIv msg = B.unsafeCreate (B.length msg) $ \dst -> loop dst origIv msg
+  where loop d iv@(IV i) m
+            | B.null m  = return ()
+            | otherwise = poke d out >> loop (d `plusPtr` 1) ni (B.drop 1 m)
+          where m'  = if B.length m < blockSize ctx
+                            then m `B.append` B.replicate (blockSize ctx - B.length m) 0
+                            else B.take (blockSize ctx) m
+                r   = cfbEncrypt ctx iv m'
+                out = B.head r
+                ni  = IV (B.drop 1 i `B.snoc` out)
+
+-- | Decrypt using CFB mode in 8 bit output
+--
+-- Effectively turn a Block cipher in CFB mode into a Stream cipher
+cfb8Decrypt :: BlockCipher a => a -> IV a -> B.ByteString -> B.ByteString
+cfb8Decrypt ctx origIv msg = B.unsafeCreate (B.length msg) $ \dst -> loop dst origIv msg
+  where loop d iv@(IV i) m
+            | B.null m  = return ()
+            | otherwise = poke d out >> loop (d `plusPtr` 1) ni (B.drop 1 m)
+          where m'  = if B.length m < blockSize ctx
+                            then m `B.append` B.replicate (blockSize ctx - B.length m) 0
+                            else B.take (blockSize ctx) m
+                r   = cfbDecrypt ctx iv m'
+                out = B.head r
+                ni  = IV (B.drop 1 i `B.snoc` B.head m')
 
 chunk :: Int -> ByteString -> [ByteString]
 chunk sz bs = split bs
