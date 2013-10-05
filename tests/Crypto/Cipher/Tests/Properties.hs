@@ -26,6 +26,10 @@ data CBCUnit a = CBCUnit (Key a) (IV a) B.ByteString
 data CFBUnit a = CFBUnit (Key a) (IV a) B.ByteString
     deriving (Eq)
 
+-- | a CFB unit test
+data CFB8Unit a = CFB8Unit (Key a) (IV a) B.ByteString
+    deriving (Eq)
+
 -- | a CTR unit test
 data CTRUnit a = CTRUnit (Key a) (IV a) B.ByteString
     deriving (Eq)
@@ -47,6 +51,8 @@ instance Show (CBCUnit a) where
     show (CBCUnit key iv b) = "CBC(key=" ++ show (toBytes key) ++ ",iv=" ++ show (toBytes iv) ++ ",input=" ++ show b ++ ")"
 instance Show (CFBUnit a) where
     show (CFBUnit key iv b) = "CFB(key=" ++ show (toBytes key) ++ ",iv=" ++ show (toBytes iv) ++ ",input=" ++ show b ++ ")"
+instance Show (CFB8Unit a) where
+    show (CFB8Unit key iv b) = "CFB8(key=" ++ show (toBytes key) ++ ",iv=" ++ show (toBytes iv) ++ ",input=" ++ show b ++ ")"
 instance Show (CTRUnit a) where
     show (CTRUnit key iv b) = "CTR(key=" ++ show (toBytes key) ++ ",iv=" ++ show (toBytes iv) ++ ",input=" ++ show b ++ ")"
 instance Show (XTSUnit a) where
@@ -99,6 +105,9 @@ instance BlockCipher a => Arbitrary (CFBUnit a) where
                         <*> generateIv
                         <*> generatePlaintextMultiple16
 
+instance BlockCipher a => Arbitrary (CFB8Unit a) where
+    arbitrary = CFB8Unit <$> generateKey <*> generateIv <*> generatePlaintext
+
 instance BlockCipher a => Arbitrary (CTRUnit a) where
     arbitrary = CTRUnit <$> generateKey
                         <*> generateIv
@@ -128,6 +137,7 @@ testModes cipher =
         [ testProperty "ECB" ecbProp
         , testProperty "CBC" cbcProp
         , testProperty "CFB" cfbProp
+        , testProperty "CFB8" cfb8Prop
         , testProperty "CTR" ctrProp
         , testProperty "XTS" xtsProp
         , testProperty "OCB" (aeadProp AEAD_OCB)
@@ -137,18 +147,20 @@ testModes cipher =
         , testProperty "GCM" (aeadProp AEAD_GCM)
         ]
     ]
-  where (ecbProp,cbcProp,cfbProp,ctrProp,xtsProp,aeadProp) = toTests cipher
+  where (ecbProp,cbcProp,cfbProp,cfb8Prop,ctrProp,xtsProp,aeadProp) = toTests cipher
         toTests :: BlockCipher a
                 => a
                 -> ((ECBUnit a -> Bool),
                     (CBCUnit a -> Bool),
                     (CFBUnit a -> Bool),
+                    (CFB8Unit a -> Bool),
                     (CTRUnit a -> Bool),
                     (XTSUnit a -> Bool),
                     (AEADMode -> AEADUnit a -> Bool))
         toTests _ = (testProperty_ECB
                     ,testProperty_CBC
                     ,testProperty_CFB
+                    ,testProperty_CFB8
                     ,testProperty_CTR
                     ,testProperty_XTS
                     ,testProperty_AEAD
@@ -161,6 +173,9 @@ testModes cipher =
 
         testProperty_CFB (CFBUnit (cipherInit -> ctx) testIV plaintext) =
             plaintext `assertEq` cfbDecrypt ctx testIV (cfbEncrypt ctx testIV plaintext)
+
+        testProperty_CFB8 (CFB8Unit (cipherInit -> ctx) testIV plaintext) =
+            plaintext `assertEq` cfb8Decrypt ctx testIV (cfb8Encrypt ctx testIV plaintext)
 
         testProperty_CTR (CTRUnit (cipherInit -> ctx) testIV plaintext) =
             plaintext `assertEq` ctrCombine ctx testIV (ctrCombine ctx testIV plaintext)
