@@ -1,5 +1,5 @@
 Name:                cipher-camellia
-Version:             0.0.1
+Version:             0.0.2
 Description:         Camellia block cipher primitives
 License:             BSD3
 License-file:        LICENSE
