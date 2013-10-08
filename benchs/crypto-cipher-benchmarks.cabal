@@ -1,5 +1,5 @@
 Name:                crypto-cipher-benchmarks
-Version:             0.0.4
+Version:             0.0.5
 Synopsis:            Generic cryptography cipher benchmarks
 Description:         Generic cryptography cipher benchmarks
 License:             BSD3
