@@ -25,9 +25,9 @@ Library
                    , test-framework-quickcheck2
                    , test-framework-hunit
                    , bytestring
-                   , byteable >= 0.1.1
-                   , securemem >= 0.1.1
-                   , crypto-cipher-types >= 0.0.7
+                   , byteable >= 0.1.1 && < 0.2
+                   , securemem >= 0.1.1 && < 0.2
+                   , crypto-cipher-types >= 0.0.7 && < 0.1
   ghc-options:       -Wall -fwarn-tabs
 
 Test-Suite test-crypto-cipher-dummy

@@ -16,9 +16,9 @@ Library
   Build-Depends:     base >= 4 && < 5
                    , bytestring
                    , byteable
-                   , crypto-cipher-types >= 0.0.3
                    , vector
                    , securemem >= 0.1.2
+                   , crypto-cipher-types >= 0.0.3 && < 0.1
   Exposed-modules:   Crypto.Cipher.Blowfish
   Other-modules:     Crypto.Cipher.Blowfish.Primitive
   ghc-options:       -Wall -optc-O3 -fno-cse -fwarn-tabs
@@ -28,14 +28,14 @@ Test-Suite test-cipher-blowfish
   hs-source-dirs:    Tests
   Main-Is:           Tests.hs
   Build-depends:     base >= 4 && < 5
-                   , cipher-blowfish
-                   , crypto-cipher-types >= 0.0.3
-                   , crypto-cipher-tests
                    , bytestring
-                   , byteable
                    , QuickCheck >= 2
                    , test-framework >= 0.3.3
                    , test-framework-quickcheck2 >= 0.2.9
+                   , byteable
+                   , crypto-cipher-types >= 0.0.3
+                   , crypto-cipher-tests
+                   , cipher-blowfish
 
 Benchmark bench-cipher-blowfish
   hs-source-dirs:    Benchmarks
@@ -43,11 +43,11 @@ Benchmark bench-cipher-blowfish
   type:              exitcode-stdio-1.0
   Build-depends:     base >= 4 && < 5
                    , bytestring
-                   , cipher-blowfish
-                   , crypto-cipher-types
-                   , crypto-cipher-benchmarks
                    , criterion
                    , mtl
+                   , crypto-cipher-types
+                   , crypto-cipher-benchmarks
+                   , cipher-blowfish
 
 source-repository head
   type:     git

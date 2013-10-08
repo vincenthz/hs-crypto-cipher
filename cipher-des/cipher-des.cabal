@@ -16,8 +16,8 @@ Library
   Build-Depends:     base >= 4 && < 5
                    , bytestring
                    , byteable
-                   , crypto-cipher-types >= 0.0.3
                    , securemem >= 0.1.2
+                   , crypto-cipher-types >= 0.0.3 && < 0.1
   Exposed-modules:   Crypto.Cipher.DES
                    , Crypto.Cipher.TripleDES
   Other-modules:     Crypto.Cipher.DES.Primitive
@@ -31,14 +31,14 @@ Test-Suite test-cipher-des
   hs-source-dirs:    Tests
   Main-Is:           Tests.hs
   Build-depends:     base >= 4 && < 5
-                   , cipher-des
-                   , crypto-cipher-types
-                   , crypto-cipher-tests
                    , bytestring
-                   , byteable
                    , QuickCheck >= 2
                    , test-framework >= 0.3.3
                    , test-framework-quickcheck2 >= 0.2.9
+                   , byteable
+                   , crypto-cipher-types
+                   , crypto-cipher-tests
+                   , cipher-des
 
 Benchmark bench-cipher-des
   hs-source-dirs:    Benchmarks
@@ -46,11 +46,11 @@ Benchmark bench-cipher-des
   type:              exitcode-stdio-1.0
   Build-depends:     base >= 4 && < 5
                    , bytestring
-                   , cipher-des
-                   , crypto-cipher-types
-                   , crypto-cipher-benchmarks
                    , criterion
                    , mtl
+                   , crypto-cipher-types
+                   , crypto-cipher-benchmarks
+                   , cipher-des
 
 source-repository head
   type:     git

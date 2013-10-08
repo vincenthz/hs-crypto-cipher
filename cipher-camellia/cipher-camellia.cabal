@@ -15,10 +15,10 @@ Cabal-Version:       >=1.8
 Library
   Build-Depends:     base >= 4 && < 5
                    , bytestring
-                   , byteable
-                   , crypto-cipher-types >= 0.0.3
-                   , securemem >= 0.1.2
                    , vector
+                   , byteable
+                   , securemem >= 0.1.2
+                   , crypto-cipher-types >= 0.0.3 && < 0.1
   Exposed-modules:   Crypto.Cipher.Camellia
   Other-modules:     Crypto.Cipher.Camellia.Primitive
   ghc-options:       -Wall -fwarn-tabs
@@ -28,14 +28,14 @@ Test-Suite test-cipher-camellia
   hs-source-dirs:    Tests
   Main-Is:           Tests.hs
   Build-depends:     base >= 4 && < 5
-                   , cipher-camellia
-                   , crypto-cipher-types
-                   , crypto-cipher-tests
                    , bytestring
-                   , byteable
                    , QuickCheck >= 2
                    , test-framework >= 0.3.3
                    , test-framework-quickcheck2 >= 0.2.9
+                   , byteable
+                   , cipher-camellia
+                   , crypto-cipher-types
+                   , crypto-cipher-tests
 
 Benchmark bench-cipher-camellia
   hs-source-dirs:    Benchmarks
@@ -43,11 +43,11 @@ Benchmark bench-cipher-camellia
   type:              exitcode-stdio-1.0
   Build-depends:     base >= 4 && < 5
                    , bytestring
+                   , criterion
+                   , mtl
                    , cipher-camellia
                    , crypto-cipher-types
                    , crypto-cipher-benchmarks
-                   , criterion
-                   , mtl
 
 source-repository head
   type:     git
