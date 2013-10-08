@@ -1,5 +1,5 @@
 Name:                cipher-blowfish
-Version:             0.0.2
+Version:             0.0.3
 Description:         Blowfish cipher primitives
 License:             BSD3
 License-file:        LICENSE
