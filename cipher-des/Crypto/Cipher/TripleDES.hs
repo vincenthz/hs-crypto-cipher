@@ -57,13 +57,13 @@ instance Cipher DES_EEE2 where
 
 instance BlockCipher DES_EEE3 where
     blockSize _ = 8
-    ecbEncrypt (DES_EEE3 k1 k2 k3) = unblockify . map (encrypt k1 . encrypt k2 . encrypt k3) . blockify
-    ecbDecrypt (DES_EEE3 k1 k2 k3) = unblockify . map (decrypt k3 . decrypt k2 . decrypt k1) . blockify
+    ecbEncrypt (DES_EEE3 k1 k2 k3) = unblockify . map (encrypt k3 . encrypt k2 . encrypt k1) . blockify
+    ecbDecrypt (DES_EEE3 k1 k2 k3) = unblockify . map (decrypt k1 . decrypt k2 . decrypt k3) . blockify
 
 instance BlockCipher DES_EDE3 where
     blockSize _ = 8
-    ecbEncrypt (DES_EDE3 k1 k2 k3) = unblockify . map (encrypt k1 . decrypt k2 . encrypt k3) . blockify
-    ecbDecrypt (DES_EDE3 k1 k2 k3) = unblockify . map (decrypt k3 . encrypt k2 . decrypt k1) . blockify
+    ecbEncrypt (DES_EDE3 k1 k2 k3) = unblockify . map (encrypt k3 . decrypt k2 . encrypt k1) . blockify
+    ecbDecrypt (DES_EDE3 k1 k2 k3) = unblockify . map (decrypt k1 . encrypt k2 . decrypt k3) . blockify
 
 instance BlockCipher DES_EEE2 where
     blockSize _ = 8
