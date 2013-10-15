@@ -1,5 +1,5 @@
 Name:                crypto-cipher-types
-Version:             0.0.7
+Version:             0.1.0.999
 Synopsis:            Generic cryptography cipher types
 Description:         Generic cryptography cipher types
 License:             BSD3
@@ -16,8 +16,13 @@ data-files:          README.md
 
 Library
   Exposed-modules:   Crypto.Cipher.Types
+                   , Crypto.Cipher.Types.Unsafe
   Other-modules:     Crypto.Cipher.Types.GF
                    , Crypto.Cipher.Types.Block
+                   , Crypto.Cipher.Types.BlockMode
+                   , Crypto.Cipher.Types.BlockIO
+                   , Crypto.Cipher.Types.Stream
+                   , Crypto.Cipher.Types.OfIO
                    , Crypto.Cipher.Types.AEAD
                    , Crypto.Cipher.Types.Base
                    , Crypto.Cipher.Types.Utils

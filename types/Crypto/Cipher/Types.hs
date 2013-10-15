@@ -13,6 +13,7 @@ module Crypto.Cipher.Types
     -- * Cipher classes
       Cipher(..)
     , BlockCipher(..)
+    , BlockCipherModes(..)
     , StreamCipher(..)
     , DataUnitOffset
     , KeySizeSpecifier(..)
@@ -21,16 +22,10 @@ module Crypto.Cipher.Types
     , AEADState(..)
     , AEADMode(..)
     , AEADModeImpl(..)
-    -- * CFB8 mode
     , cfb8Encrypt
     , cfb8Decrypt
-    -- * AEAD
-    , aeadAppendHeader
-    , aeadEncrypt
-    , aeadDecrypt
-    , aeadFinalize
-    , aeadSimpleEncrypt
-    , aeadSimpleDecrypt
+    -- * AEAD functions
+    , module Crypto.Cipher.Types.AEAD
     -- * Key type and constructor
     , Key
     , makeKey
@@ -47,6 +42,7 @@ import Data.SecureMem
 import Data.Byteable
 import Crypto.Cipher.Types.Base
 import Crypto.Cipher.Types.Block
+import Crypto.Cipher.Types.BlockMode
 import Crypto.Cipher.Types.Stream
 import Crypto.Cipher.Types.AEAD
 

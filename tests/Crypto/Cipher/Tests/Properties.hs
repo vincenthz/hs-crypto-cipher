@@ -131,7 +131,7 @@ instance StreamCipher a => Arbitrary (StreamUnit a) where
 
 -- | Test a generic block cipher for properties
 -- related to block cipher modes.
-testModes :: BlockCipher a => a -> [Test]
+testModes :: BlockCipherModes a => a -> [Test]
 testModes cipher =
     [ testGroup "decrypt.encrypt==id"
         [ testProperty "ECB" ecbProp
@@ -148,7 +148,7 @@ testModes cipher =
         ]
     ]
   where (ecbProp,cbcProp,cfbProp,cfb8Prop,ctrProp,xtsProp,aeadProp) = toTests cipher
-        toTests :: BlockCipher a
+        toTests :: BlockCipherModes a
                 => a
                 -> ((ECBUnit a -> Bool),
                     (CBCUnit a -> Bool),

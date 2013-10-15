@@ -30,7 +30,7 @@ import Crypto.Cipher.Tests.KATs
 import Crypto.Cipher.Tests.Properties
 
 -- | Return tests for a specific blockcipher and a list of KATs
-testBlockCipher :: BlockCipher a => KATs -> a -> Test
+testBlockCipher :: BlockCipherModes a => KATs -> a -> Test
 testBlockCipher kats cipher = testGroup (cipherName cipher)
     (  (if kats == defaultKATs  then [] else [testKATs kats cipher])
     ++ testModes cipher

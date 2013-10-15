@@ -3,6 +3,7 @@ module Main where
 
 import Test.Framework (defaultMain)
 import Crypto.Cipher.Types
+import Crypto.Cipher.Types.Unsafe
 import Crypto.Cipher.Tests
 import qualified Data.ByteString as B
 import Data.Bits (xor)
@@ -18,8 +19,10 @@ instance Cipher XorCipher where
 
 instance BlockCipher XorCipher where
     blockSize  _   = 16
-    ecbEncrypt _ b = B.pack $ B.zipWith xor (B.replicate (B.length b) 0xa5) b
-    ecbDecrypt _ b = B.pack $ B.zipWith xor (B.replicate (B.length b) 0xa5) b
+    ecbEncryptMutable cipher d s len = onBlock cipher xorBS d s len
+    ecbDecryptMutable cipher d s len = onBlock cipher xorBS d s len
+
+xorBS b = B.pack $ B.zipWith xor (B.replicate (B.length b) 0xa5) b
 
 instance StreamCipher XorCipher where
     streamCombine _ b = (B.pack $ B.zipWith xor (B.replicate (B.length b) 0x12) b, XorCipher)

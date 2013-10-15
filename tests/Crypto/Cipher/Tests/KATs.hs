@@ -95,7 +95,7 @@ defaultStreamKATs :: [KAT_Stream]
 defaultStreamKATs = []
 
 -- | tests related to KATs
-testKATs :: BlockCipher cipher => KATs -> cipher -> Test
+testKATs :: BlockCipherModes cipher => KATs -> cipher -> Test
 testKATs kats cipher = testGroup "KAT"
     (   maybeGroup makeECBTest "ECB" (kat_ECB kats)
      ++ maybeGroup makeCBCTest "CBC" (kat_CBC kats)
