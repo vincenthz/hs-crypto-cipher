@@ -3,6 +3,7 @@ module Main where
 
 import Test.Framework (defaultMain)
 import Crypto.Cipher.Types
+import Crypto.Cipher.Types.Unsafe
 import Crypto.Cipher.Tests
 import qualified Data.ByteString as B
 import Data.Bits (xor)
@@ -18,15 +19,25 @@ instance Cipher XorCipher where
 
 instance BlockCipher XorCipher where
     blockSize  _   = 16
-    ecbEncrypt _ b = B.pack $ B.zipWith xor (B.replicate (B.length b) 0xa5) b
-    ecbDecrypt _ b = B.pack $ B.zipWith xor (B.replicate (B.length b) 0xa5) b
+    ecbEncrypt _ s = xorBS s
+    ecbDecrypt _ s = xorBS s
+
+instance BlockCipherIO XorCipher where
+    ecbEncryptMutable cipher d s len = onBlock cipher xorBS d s len
+    ecbDecryptMutable cipher d s len = onBlock cipher xorBS d s len
 
 instance StreamCipher XorCipher where
     streamCombine _ b = (B.pack $ B.zipWith xor (B.replicate (B.length b) 0x12) b, XorCipher)
 
+xorBS :: B.ByteString -> B.ByteString
+xorBS b = B.pack $ B.zipWith xor (B.replicate (B.length b) 0xa5) b
+
 tests =
-    [ testBlockCipher defaultKATs (undefined :: XorCipher)
-    , testStreamCipher defaultStreamKATs (undefined :: XorCipher)
+    [ testBlockCipher defaultKATs cipher
+    , testBlockCipherIO defaultKATs cipher
+    , testStreamCipher defaultStreamKATs cipher
     ]
+  where cipher :: XorCipher
+        cipher = undefined
 
 main = defaultMain tests

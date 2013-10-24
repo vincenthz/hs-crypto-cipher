@@ -16,7 +16,15 @@ data-files:          README.md
 
 Library
   Exposed-modules:   Crypto.Cipher.Types
+                   , Crypto.Cipher.Types.Unsafe
   Other-modules:     Crypto.Cipher.Types.GF
+                   , Crypto.Cipher.Types.Block
+                   , Crypto.Cipher.Types.BlockIO
+                   , Crypto.Cipher.Types.Stream
+                   , Crypto.Cipher.Types.OfIO
+                   , Crypto.Cipher.Types.AEAD
+                   , Crypto.Cipher.Types.Base
+                   , Crypto.Cipher.Types.Utils
   Build-depends:     base >= 4 && < 5
                    , bytestring
                    , byteable >= 0.1.1
