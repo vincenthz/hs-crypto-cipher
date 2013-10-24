@@ -67,13 +67,22 @@ class BlockCipher cipher => BlockCipherModes cipher where
 
     -- | encrypt using the XTS mode.
     --
-    -- input need to be a multiple of the blocksize
-    xtsEncrypt :: (cipher, cipher) -> IV cipher -> DataUnitOffset -> ByteString -> ByteString
+    -- input need to be a multiple of the blocksize.
+    xtsEncrypt :: (cipher, cipher)
+               -> IV cipher        -- ^ Usually represent the Data Unit (e.g. disk sector)
+               -> DataUnitOffset   -- ^ Offset in the data unit in number of blocks
+               -> ByteString       -- ^ Plaintext
+               -> ByteString       -- ^ Ciphertext
     xtsEncrypt = xtsEncryptGeneric
+
     -- | decrypt using the XTS mode.
     --
     -- input need to be a multiple of the blocksize
-    xtsDecrypt :: (cipher, cipher) -> IV cipher -> DataUnitOffset -> ByteString -> ByteString
+    xtsDecrypt :: (cipher, cipher)
+               -> IV cipher        -- ^ Usually represent the Data Unit (e.g. disk sector)
+               -> DataUnitOffset   -- ^ Offset in the data unit in number of blocks
+               -> ByteString       -- ^ Ciphertext
+               -> ByteString       -- ^ Plaintext
     xtsDecrypt = xtsDecryptGeneric
 
     -- | Initialize a new AEAD State
@@ -143,7 +152,9 @@ xtsGeneric :: BlockCipher cipher
            -> DataUnitOffset
            -> ByteString
            -> ByteString
-xtsGeneric f (cipher, tweakCipher) iv sPoint input = B.concat $ doXts iniTweak $ chunk (blockSize cipher) input
+xtsGeneric f (cipher, tweakCipher) iv sPoint input
+    | blockSize cipher /= 128 = error "XTS mode is only available with cipher that have a block size of 128 bits"
+    | otherwise = B.concat $ doXts iniTweak $ chunk (blockSize cipher) input
   where encTweak = ecbEncrypt tweakCipher (toBytes iv)
         iniTweak = iterate xtsGFMul encTweak !! fromIntegral sPoint
         doXts _     []     = []
