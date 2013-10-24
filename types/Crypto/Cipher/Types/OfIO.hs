@@ -12,6 +12,7 @@ module Crypto.Cipher.Types.OfIO
     -- * ECB
       ecbEncryptOfIO
     , ecbDecryptOfIO
+{-
     -- * CBC
     , cbcEncryptOfIO
     , cbcDecryptOfIO
@@ -25,22 +26,23 @@ module Crypto.Cipher.Types.OfIO
     -- * XTS
     , xtsEncryptOfIO
     , xtsDecryptOfIO
+-}
     ) where
 
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Internal as B
 import Data.Byteable
-import Crypto.Cipher.Types.Base
+--import Crypto.Cipher.Types.Base
 import Crypto.Cipher.Types.Block
 import Crypto.Cipher.Types.BlockIO
-import Foreign.Storable (poke)
-import Foreign.Ptr
+--import Foreign.Storable (poke)
+--import Foreign.Ptr
 
-isBlockSized :: BlockCipherIO cipher => cipher -> Int -> Bool
+isBlockSized :: (BlockCipher cipher, BlockCipherIO cipher) => cipher -> Int -> Bool
 isBlockSized cipher bsLen = (bsLen `mod` blockSize cipher) == 0
 
-notBlockSized :: BlockCipherIO cipher => cipher -> a
+notBlockSized :: (BlockCipher cipher, BlockCipherIO cipher) => cipher -> a
 notBlockSized = undefined
 
 withDest :: BlockCipherIO cipher
@@ -57,6 +59,7 @@ withDest cipher bs f
         f dst src (fromIntegral len)
   where len = B.length bs
 
+{-
 withDestIV :: BlockCipherIO cipher
            => cipher
            -> IV cipher
@@ -86,6 +89,7 @@ withDestIVAnySize (IV iv) bs f
         withBytePtr bs     $ \src   ->
         f ivPtr dst src (fromIntegral len)
   where len = B.length bs
+-}
 
 -- | Encrypt using the ECB mode.
 --
@@ -99,6 +103,7 @@ ecbEncryptOfIO cipher bs = withDest cipher bs $ ecbEncryptMutable cipher
 ecbDecryptOfIO :: BlockCipherIO cipher => cipher -> ByteString -> ByteString
 ecbDecryptOfIO cipher bs = withDest cipher bs $ ecbEncryptMutable cipher
 
+{-
 -- | encrypt using the CBC mode.
 --
 -- input need to be a multiple of the blocksize
@@ -175,3 +180,4 @@ cfb8DecryptOfIO ctx origIv msg = B.unsafeCreate (B.length msg) $ \dst -> loop ds
                 r   = cfbDecryptOfIO ctx iv m'
                 out = B.head r
                 ni  = IV (B.drop 1 i `B.snoc` B.head m')
+-}
