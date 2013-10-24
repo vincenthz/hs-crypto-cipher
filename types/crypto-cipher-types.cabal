@@ -1,5 +1,5 @@
 Name:                crypto-cipher-types
-Version:             0.1.0.999
+Version:             0.0.7
 Synopsis:            Generic cryptography cipher types
 Description:         Generic cryptography cipher types
 License:             BSD3
