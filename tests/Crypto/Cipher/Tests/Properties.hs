@@ -10,7 +10,9 @@ import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.QuickCheck
 
 import Crypto.Cipher.Types
+import Crypto.Cipher.Types.Unsafe
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Internal as B
 import Data.Byteable
 import Data.Maybe
 

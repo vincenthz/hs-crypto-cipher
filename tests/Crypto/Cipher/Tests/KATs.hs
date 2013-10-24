@@ -95,7 +95,10 @@ defaultStreamKATs :: [KAT_Stream]
 defaultStreamKATs = []
 
 -- | tests related to KATs
-testKATs :: BlockCipherModes cipher => KATs -> cipher -> Test
+testKATs :: BlockCipher cipher
+         => KATs
+         -> cipher
+         -> Test
 testKATs kats cipher = testGroup "KAT"
     (   maybeGroup makeECBTest "ECB" (kat_ECB kats)
      ++ maybeGroup makeCBCTest "CBC" (kat_CBC kats)
@@ -149,9 +152,6 @@ testKATs kats cipher = testGroup "KAT"
                 etag = aeadFinalize aeadEFinal (aeadTaglen d)
                 dtag = aeadFinalize aeadDFinal (aeadTaglen d)
                
-        cipherMakeIV :: BlockCipher cipher => cipher -> ByteString -> IV cipher
-        cipherMakeIV _ bs = fromJust $ makeIV bs
-
 testStreamKATs :: StreamCipher cipher => [KAT_Stream] -> cipher -> Test
 testStreamKATs kats cipher = testGroup "KAT" $ maybeGroup makeStreamTest "Stream" kats
   where makeStreamTest i d =
@@ -164,6 +164,10 @@ cipherMakeKey :: Cipher cipher => cipher -> ByteString -> Key cipher
 cipherMakeKey c bs = case makeKey bs of
                         Left e -> error ("invalid key " ++ show bs ++ " for " ++ show (cipherName c) ++ " " ++ show e)
                         Right k  -> k
+
+cipherMakeIV :: BlockCipher cipher => cipher -> ByteString -> IV cipher
+cipherMakeIV _ bs = fromJust $ makeIV bs
+
 
 maybeGroup :: (String -> t -> [Test]) -> TestName -> [t] -> [Test]
 maybeGroup mkTest groupName l

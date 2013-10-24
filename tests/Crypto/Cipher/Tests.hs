@@ -9,6 +9,7 @@
 {-# LANGUAGE ViewPatterns #-}
 module Crypto.Cipher.Tests
     ( testBlockCipher
+    , testBlockCipherIO
     , testStreamCipher
     -- * KATs
     , defaultKATs
@@ -26,14 +27,22 @@ module Crypto.Cipher.Tests
 import Test.Framework (Test, testGroup)
 
 import Crypto.Cipher.Types
+import Crypto.Cipher.Types.Unsafe
 import Crypto.Cipher.Tests.KATs
 import Crypto.Cipher.Tests.Properties
 
 -- | Return tests for a specific blockcipher and a list of KATs
-testBlockCipher :: BlockCipherModes a => KATs -> a -> Test
+testBlockCipher :: BlockCipher a => KATs -> a -> Test
 testBlockCipher kats cipher = testGroup (cipherName cipher)
     (  (if kats == defaultKATs  then [] else [testKATs kats cipher])
     ++ testModes cipher
+    )
+
+-- | Return test for a specific blockcipher and a list of KATs
+testBlockCipherIO :: BlockCipherIO a => KATs -> a -> Test
+testBlockCipherIO _ cipher = testGroup ("mutable " ++ cipherName cipher)
+    ( []
+    ++ testIOModes cipher
     )
 
 -- | Return tests for a specific streamcipher and a list of KATs
