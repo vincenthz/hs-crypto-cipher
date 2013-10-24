@@ -14,7 +14,6 @@ import qualified Data.ByteString as B
 import Data.Byteable
 import Crypto.Cipher.Types.Base
 import Crypto.Cipher.Types.Block
-import Crypto.Cipher.Types.BlockMode
 
 -- | Append associated data into the AEAD state
 aeadAppendHeader :: BlockCipher a => AEAD a -> ByteString -> AEAD a

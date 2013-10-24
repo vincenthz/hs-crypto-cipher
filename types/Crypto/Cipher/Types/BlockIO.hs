@@ -20,25 +20,30 @@ module Crypto.Cipher.Types.BlockIO
     ) where
 
 import Control.Applicative
+import Data.Word
 import Data.ByteString (ByteString)
-import qualified Data.ByteString as B
 import qualified Data.ByteString.Internal as B (fromForeignPtr, memcpy)
 import Data.Byteable
-import Data.Word
-import Data.Bits (shiftR, xor, Bits)
-import Crypto.Cipher.Types.Base
-import Crypto.Cipher.Types.Utils
-import Crypto.Cipher.Types.Block
+import Data.Bits (xor, Bits)
 import Foreign.Storable (poke, peek, Storable)
-import Foreign.Ptr (plusPtr, Ptr, castPtr, nullPtr)
+--import Foreign.Ptr (plusPtr, Ptr, castPtr, nullPtr)
+import Crypto.Cipher.Types.Block
+import Foreign.Ptr
 import Foreign.ForeignPtr (newForeignPtr_)
 
+-- | pointer to the destination data
 type PtrDest   = Ptr Word8
+
+-- | pointer to the source data
 type PtrSource = Ptr Word8
+
+-- | pointer to the IV data
 type PtrIV     = Ptr Word8
+
+-- | Length of the pointed data
 type BufferLength = Word32
 
--- | Symmetric block cipher class
+-- | Symmetric block cipher class, mutable API
 class BlockCipher cipher => BlockCipherIO cipher where
     -- | Encrypt using the ECB mode.
     --
@@ -62,6 +67,7 @@ class BlockCipher cipher => BlockCipherIO cipher where
     cbcDecryptMutable :: cipher -> PtrIV -> PtrDest -> PtrSource -> BufferLength -> IO ()
     cbcDecryptMutable = cbcDecryptGeneric
 
+{-
     -- | encrypt using the CFB mode.
     --
     -- input need to be a multiple of the blocksize
@@ -95,6 +101,7 @@ class BlockCipher cipher => BlockCipherIO cipher where
     -- input need to be a multiple of the blocksize
     xtsDecryptMutable :: (cipher, cipher) -> PtrIV -> DataUnitOffset -> PtrDest -> PtrSource -> BufferLength -> IO ()
     xtsDecryptMutable = xtsDecryptGeneric
+-}
 
 cbcEncryptGeneric :: BlockCipherIO cipher => cipher -> PtrIV -> PtrDest -> PtrSource -> BufferLength -> IO ()
 cbcEncryptGeneric cipher = loopBS cipher encrypt
@@ -111,6 +118,7 @@ cbcDecryptGeneric cipher = loopBS cipher decrypt
             mutableXor d iv d bs
             return d
 
+{-
 cfbEncryptGeneric :: BlockCipherIO cipher => cipher -> PtrIV -> PtrDest -> PtrSource -> BufferLength -> IO ()
 cfbEncryptGeneric cipher = loopBS cipher encrypt
   where encrypt bs iv d s = do
@@ -132,49 +140,21 @@ ctrCombineGeneric cipher ivini dst src len = return () {-B.concat $ doCnt ivini 
         doCnt iv (i:is) =
             let ivEnc = ecbEncrypt cipher (toBytes iv)
              in bxor i ivEnc : doCnt (ivAdd iv 1) is-}
-
-xtsEncryptGeneric :: BlockCipherIO cipher
-                  => (cipher,cipher) -> PtrIV -> DataUnitOffset -> PtrDest -> PtrSource -> BufferLength -> IO ()
-xtsEncryptGeneric = const $ const $ const $ const $ const $ const (return ())
-
-xtsDecryptGeneric :: BlockCipherIO cipher
-                  => (cipher,cipher) -> PtrIV -> DataUnitOffset -> PtrDest -> PtrSource -> BufferLength -> IO ()
-xtsDecryptGeneric = const $ const $ const $ const $ const $ const (return ())
-
-{-
-xtsGeneric :: BlockCipherIO cipher
-           => (cipher -> B.ByteString -> B.ByteString)
-           -> (cipher,cipher)
-           -> IV cipher
-           -> DataUnitOffset
-           -> ByteString
-           -> ByteString
-xtsGeneric f (cipher, tweakCipher) iv sPoint input = B.concat $ doXts iniTweak $ chunk (blockSize cipher) input
-  where encTweak = ecbEncrypt tweakCipher (toBytes iv)
-        iniTweak = iterate xtsGFMul encTweak !! fromIntegral sPoint
-        doXts _     []     = []
-        doXts tweak (i:is) =
-            let o = bxor (f cipher $ bxor i tweak) tweak
-             in o : doXts (xtsGFMul tweak) is
 -}
 
 -- | Helper to use a purer interface
 onBlock :: BlockCipherIO cipher
         => cipher
-        -> (B.ByteString -> B.ByteString)
+        -> (ByteString -> ByteString)
         -> PtrDest
         -> PtrSource
         -> BufferLength
         -> IO ()
 onBlock cipher f dst src len = loopBS cipher wrap nullPtr dst src len
   where wrap bs fakeIv d s = do
-            putStrLn ("wrap1 : " ++ show bs ++ " " ++ show len)
             fSrc <- newForeignPtr_ s
-            putStrLn "wrap2"
             let res = f (B.fromForeignPtr fSrc 0 bs)
-            putStrLn "wrap3"
             withBytePtr res $ \r -> B.memcpy d r bs
-            putStrLn "wrap4"
             return fakeIv
 
 loopBS :: BlockCipherIO cipher
@@ -186,8 +166,8 @@ loopBS cipher f iv dst src len = loop iv dst src len
   where bs = blockSize cipher
         loop _ _ _ 0 = return ()
         loop i d s n = do
-            newIV <- f bs iv d s
-            loop newIV (d `plusPtr` bs) (s `plusPtr` bs) (len - fromIntegral bs)
+            newIV <- f bs i d s
+            loop newIV (d `plusPtr` bs) (s `plusPtr` bs) (n - fromIntegral bs)
 
 mutableXor :: PtrDest -> PtrSource -> PtrIV -> Int -> IO ()
 mutableXor (to64 -> dst) (to64 -> src) (to64 -> iv) 16 = do
