@@ -21,7 +21,6 @@ newtype Block = Block Word64
 type Rotation = Int
 type Key     = Word64
 
-type BitsX  = [Bool]
 type Bits4  = [Bool]
 type Bits6  = [Bool]
 type Bits32 = [Bool]
@@ -29,12 +28,12 @@ type Bits48 = [Bool]
 type Bits56 = [Bool]
 type Bits64 = [Bool]
 
-instance Num [Bool]
+desXor :: [Bool] -> [Bool] -> [Bool]
+desXor a b = zipWith (\x y -> (not x && y) || (x && not y)) a b
 
-instance Bits [Bool] where
-    a `xor` b = zipWith (\x y -> (not x && y) || (x && not y)) a b
-    rotate bits rot = drop rot' bits ++ take rot' bits
-      where rot' = rot `mod` (length bits)
+desRotate :: [Bool] -> Int -> [Bool]
+desRotate bits rot = drop rot' bits ++ take rot' bits
+  where rot' = rot `mod` length bits
 
 bitify :: Word64 -> Bits64
 bitify w = map (\b -> w .&. (shiftL 1 b) /= 0) [63,62..0]
@@ -77,7 +76,7 @@ do_round r (ml, mr) kb = (mr, m')
  where kb' = get_key kb r
        comp_kb = compression_permutation kb'
        expa_mr = expansion_permutation mr
-       res = comp_kb `xor` expa_mr
+       res = comp_kb `desXor` expa_mr
        res' = tail $ iterate (trans 6) ([], res)
        trans n (_, b) = (take n b, drop n b)
        res_s = concat $ zipWith (\f (x,_) -> f x) [s_box_1, s_box_2,
@@ -85,12 +84,12 @@ do_round r (ml, mr) kb = (mr, m')
                                                    s_box_5, s_box_6,
                                                    s_box_7, s_box_8] res'
        res_p = p_box res_s
-       m' = res_p `xor` ml
+       m' = res_p `desXor` ml
 
 get_key :: Bits56 -> Rotation -> Bits56
 get_key kb r = kb'
  where (kl, kr) = takeDrop 28 kb
-       kb' = rotateL kl r ++ rotateL kr r
+       kb' = desRotate kl r ++ desRotate kr r
 
 compression_permutation :: Bits56 -> Bits48
 compression_permutation kb = map ((!!) kb) i
@@ -110,9 +109,13 @@ s_box :: [[Word8]] -> Bits6 -> Bits4
 s_box s [a,b,c,d,e,f] = to_bool 4 $ (s !! row) !! col
  where row = sum $ zipWith numericise [a,f]     [1, 0]
        col = sum $ zipWith numericise [b,c,d,e] [3, 2, 1, 0]
+       numericise :: Bool -> Int -> Int
        numericise = (\x y -> if x then 2^y else 0)
+
+       to_bool :: Int -> Word8 -> [Bool]
        to_bool 0 _ = []
        to_bool n i = ((i .&. 8) == 8):to_bool (n-1) (shiftL i 1)
+s_box _ _             = error "DES: internal error bits6 more than 6 elements"
 
 s_box_1 :: Bits6 -> Bits4
 s_box_1 = s_box i
