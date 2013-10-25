@@ -6,7 +6,7 @@ module Crypto.Cipher
     , StreamCipher(..)
     -- * Cipher implementations
     , AES128, AES192, AES256
-    , Blowfish
+    , Blowfish, Blowfish64, Blowfish128, Blowfish256, Blowfish448
     , DES
     , DES_EEE3, DES_EDE3, DES_EEE2, DES_EDE2
     , Camellia128
