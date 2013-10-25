@@ -4,6 +4,20 @@ module Crypto.Cipher
       Cipher(..)
     , BlockCipher(..)
     , StreamCipher(..)
+    -- * Key
+    , Key
+    , makeKey
+    -- * Initialization Vector (IV)
+    , IV
+    , makeIV
+    , nullIV
+    , ivAdd
+    -- * Authenticated Encryption with Associated Data (AEAD)
+    , AEAD
+    , aeadAppendHeader
+    , aeadEncrypt
+    , aeadDecrypt
+    , aeadFinalize
     -- * Cipher implementations
     , AES128, AES192, AES256
     , Blowfish, Blowfish64, Blowfish128, Blowfish256, Blowfish448
