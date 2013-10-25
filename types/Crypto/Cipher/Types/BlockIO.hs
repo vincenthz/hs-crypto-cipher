@@ -154,7 +154,7 @@ onBlock cipher f dst src len = loopBS cipher wrap nullPtr dst src len
   where wrap bs fakeIv d s = do
             fSrc <- newForeignPtr_ s
             let res = f (B.fromForeignPtr fSrc 0 bs)
-            withBytePtr res $ \r -> B.memcpy d r bs
+            withBytePtr res $ \r -> B.memcpy d r (fromIntegral bs)
             return fakeIv
 
 loopBS :: BlockCipherIO cipher
