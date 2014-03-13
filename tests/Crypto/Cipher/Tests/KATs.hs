@@ -145,7 +145,8 @@ testKATs kats cipher = testGroup "KAT"
             , testCase ("D" ++ i)  (dbs @?= aeadPlaintext d)
             ]
           where ctx  = cipherInit (cipherMakeKey cipher $ aeadKey d)
-                (Just aead) = aeadInit (aeadMode d) ctx (aeadIV d)
+                aead = maybe (error $ "cipher doesn't support aead mode: " ++ show (aeadMode d)) id
+                     $ aeadInit (aeadMode d) ctx (aeadIV d)
                 aeadHeaded     = aeadAppendHeader aead (aeadHeader d)
                 (ebs,aeadEFinal) = aeadEncrypt aeadHeaded (aeadPlaintext d)
                 (dbs,aeadDFinal) = aeadDecrypt aeadHeaded (aeadCiphertext d)
