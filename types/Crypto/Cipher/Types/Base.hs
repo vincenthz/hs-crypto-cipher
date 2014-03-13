@@ -65,7 +65,7 @@ instance Byteable AuthTag where
 
 -- | AEAD Mode
 data AEADMode =
-      AEAD_OCB
+      AEAD_OCB -- OCB3
     | AEAD_CCM
     | AEAD_EAX
     | AEAD_CWC
