@@ -19,7 +19,7 @@
 -- >
 -- > cbcEncryption :: AES256 -> ByteString -> ByteString -> ByteString
 -- > cbcEncryption ctx ivRaw plainText = cbcEncrypt ctx iv plainText
--- >   where iv = maybe (error "invalid IV") id $ ivRaw
+-- >   where iv = maybe (error "invalid IV") id $ makeIV ivRaw
 --
 module Crypto.Cipher
     (
